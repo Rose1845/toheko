@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -49,13 +48,13 @@ const memberFormSchema = z.object({
   nationalId: z.string().min(1, "National ID is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   address: z.string().min(1, "Address is required"),
-  status: z.string()
+  status: z.string(),
 });
 
 // Form schema for suspension
 const suspensionFormSchema = z.object({
   reason: z.string().min(1, "Reason is required"),
-  suspendedUntil: z.string().optional()
+  suspendedUntil: z.string().optional(),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
@@ -79,22 +78,27 @@ const Members = () => {
       nationalId: "",
       dateOfBirth: "",
       address: "",
-      status: "ACTIVE"
-    }
+      status: "ACTIVE",
+    },
   });
 
   const suspensionForm = useForm<SuspensionFormValues>({
     resolver: zodResolver(suspensionFormSchema),
     defaultValues: {
       reason: "",
-      suspendedUntil: ""
-    }
+      suspendedUntil: "",
+    },
   });
 
   // Fetch members data
-  const { data: members, isLoading, error, refetch } = useQuery({
-    queryKey: ['members'],
-    queryFn: memberService.getAllMembers
+  const {
+    data: members,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["members"],
+    queryFn: memberService.getAllMembers,
   });
 
   const handleViewDetails = (member: Member) => {
@@ -110,9 +114,9 @@ const Members = () => {
       email: member.email,
       phoneNumber: member.phoneNumber,
       nationalId: member.nationalId,
-      dateOfBirth: member.dateOfBirth.split('T')[0],
+      dateOfBirth: member.dateOfBirth.split("T")[0],
       address: member.address,
-      status: member.status
+      status: member.status,
     });
     setSelectedMember(member);
     setShowEditForm(true);
@@ -121,7 +125,7 @@ const Members = () => {
   const handleSuspendMember = (member: Member) => {
     suspensionForm.reset({
       reason: "",
-      suspendedUntil: ""
+      suspendedUntil: "",
     });
     setSelectedMember(member);
     setShowSuspendForm(true);
@@ -157,9 +161,9 @@ const Members = () => {
         nationalId: values.nationalId,
         dateOfBirth: values.dateOfBirth,
         address: values.address,
-        status: values.status
+        status: values.status,
       };
-      
+
       const result = await memberService.updateMember(memberRequest);
       toast({
         title: "Success",
@@ -183,10 +187,13 @@ const Members = () => {
     try {
       const suspensionRequest: SuspensionRequest = {
         reason: values.reason,
-        suspendedUntil: values.suspendedUntil || undefined
+        suspendedUntil: values.suspendedUntil || undefined,
       };
 
-      const result = await memberService.suspendMember(selectedMember.id, suspensionRequest);
+      const result = await memberService.suspendMember(
+        selectedMember.id,
+        suspensionRequest
+      );
       toast({
         title: "Success",
         description: result.message || "Member suspended successfully",
@@ -233,62 +240,68 @@ const Members = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members && members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.memberNo}</TableCell>
-                      <TableCell>{`${member.firstName} ${member.lastName}`}</TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>{member.phoneNumber}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            member.status === "ACTIVE"
-                              ? "default"
-                              : "destructive"
-                          }
-                        >
-                          {member.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(member)}
+                  {members &&
+                    members.map((member) => (
+                      <TableRow key={member.memberId}>
+                        <TableCell>{member.memberNo}</TableCell>
+                        <TableCell>{`${member.firstName} ${member.lastName}`}</TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.phoneNumber}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              member.status === "ACTIVE"
+                                ? "default"
+                                : "destructive"
+                            }
                           >
-                            <User className="h-4 w-4 mr-1" /> View
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditMember(member)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" /> Edit
-                          </Button>
-                          {member.status === "ACTIVE" ? (
-                            <Button
-                              variant="ghost"
-                              size="sm" 
-                              className="text-amber-600"
-                              onClick={() => handleSuspendMember(member)}
-                            >
-                              <UserMinus className="h-4 w-4 mr-1" /> Suspend
-                            </Button>
-                          ) : (
+                            {member.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-green-600"
-                              onClick={() => handleReactivateMember(member.id)}
+                              onClick={() => handleViewDetails(member)}
                             >
-                              <UserCheck className="h-4 w-4 mr-1" /> Reactivate
+                              <User className="h-4 w-4 mr-1" /> View
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditMember(member)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            {member.status === "ACTIVE" ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-amber-600"
+                                onClick={() => handleSuspendMember(member)}
+                              >
+                                <UserMinus className="h-4 w-4 mr-1" /> Suspend
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600"
+                                onClick={() =>
+                                  handleReactivateMember(
+                                    member.memberId! as unknown as number
+                                  )
+                                }
+                              >
+                                <UserCheck className="h-4 w-4 mr-1" />{" "}
+                                Reactivate
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             )}
@@ -363,13 +376,13 @@ const Members = () => {
                   <p>{selectedMember.address}</p>
                 </div>
                 <DialogFooter>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowDetails(false)}
                   >
                     Close
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setShowDetails(false);
                       handleEditMember(selectedMember);
@@ -393,7 +406,10 @@ const Members = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...memberForm}>
-              <form onSubmit={memberForm.handleSubmit(onSubmitEdit)} className="space-y-4">
+              <form
+                onSubmit={memberForm.handleSubmit(onSubmitEdit)}
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={memberForm.control}
@@ -492,7 +508,11 @@ const Members = () => {
                   )}
                 />
                 <DialogFooter>
-                  <Button variant="outline" type="button" onClick={() => setShowEditForm(false)}>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setShowEditForm(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit">Save Changes</Button>
@@ -512,7 +532,10 @@ const Members = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...suspensionForm}>
-              <form onSubmit={suspensionForm.handleSubmit(onSubmitSuspension)} className="space-y-4">
+              <form
+                onSubmit={suspensionForm.handleSubmit(onSubmitSuspension)}
+                className="space-y-4"
+              >
                 <FormField
                   control={suspensionForm.control}
                   name="reason"
@@ -520,7 +543,10 @@ const Members = () => {
                     <FormItem>
                       <FormLabel>Reason for Suspension</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Enter the reason for suspension" />
+                        <Textarea
+                          {...field}
+                          placeholder="Enter the reason for suspension"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -540,10 +566,16 @@ const Members = () => {
                   )}
                 />
                 <DialogFooter>
-                  <Button variant="outline" type="button" onClick={() => setShowSuspendForm(false)}>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setShowSuspendForm(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button variant="destructive" type="submit">Suspend Member</Button>
+                  <Button variant="destructive" type="submit">
+                    Suspend Member
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>

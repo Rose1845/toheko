@@ -162,7 +162,7 @@ const BoardMembers = () => {
         id: values.id || 0,
         memberId: values.memberId,
         position: values.position,
-        createdAt: values.createdAt,
+        createdAt: values.startDate || undefined,
         endDate: values.endDate || undefined,
         status: values.status,
       };

@@ -11,13 +11,13 @@ export const boardMemberService = {
   
   // Get a specific board member by ID
   getBoardMemberById: async (id: number): Promise<BoardMember> => {
-    const response = await apiClient.get(`/api/v1/board-members/${id}`);
+    const response = await apiClient.get(`/api/v1/bgetBoardMemberById?boardMemberId=${id}`);
     return response.data;
   },
   
   // Create a new board member
   createBoardMember: async (boardMember: BoardMemberRequest): Promise<AcknowledgementResponse> => {
-    const response = await apiClient.post('/api/v1/board-members', boardMember);
+    const response = await apiClient.post('/api/v1/create/board-members', boardMember);
     return response.data;
   },
   
