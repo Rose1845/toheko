@@ -23,6 +23,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
 import { z } from "zod";
 import DashboardLayout from "./DashboardLayout";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { memberService } from "@/services/memberService";
 
 // Schema for validation
 const nextOfKinSchema = z.object({
@@ -75,6 +90,11 @@ const NextOfKinManagement = () => {
       console.error("Error creating next of kin:", error);
       toast.error("Failed to add next of kin");
     },
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ["members"],
+    queryFn: memberService.getAllMembers,
   });
 
   // Update mutation
@@ -271,8 +291,19 @@ const NextOfKinManagement = () => {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid items-center gap-2">
+              {/* <div className="grid items-center gap-2">
                 <Label htmlFor="memberId">Member ID</Label>
+                {members?.map((member) => (
+                  <Input
+                    key={member.memberId}
+                    id="memberId"
+                    name="memberId"
+                    type="number"
+                    value={formData.memberId || ""}
+                    onChange={handleInputChange}
+                    className={formErrors.memberId ? "border-red-500" : ""}
+                  />
+                ))}
                 <Input
                   id="memberId"
                   name="memberId"
@@ -284,7 +315,37 @@ const NextOfKinManagement = () => {
                 {formErrors.memberId && (
                   <p className="text-sm text-red-500">{formErrors.memberId}</p>
                 )}
-              </div>
+              </div> */}
+              <FormField
+                control={formData}
+                name="memberId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Member</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      defaultValue={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {members?.map((member) => (
+                          <SelectItem
+                            key={member.memberId}
+                            value={member.memberId.toString()}
+                          >
+                            {member.firstName} {member.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid items-center gap-2">
                   <Label htmlFor="firstName">First Name</Label>
