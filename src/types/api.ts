@@ -39,7 +39,7 @@ export interface AuthenticationResponse {
 
 // Member types
 export interface MemberRequest {
-  id: number;
+  memberId: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -52,7 +52,7 @@ export interface MemberRequest {
 
 export interface Member extends MemberRequest {
   memberNo: string;
-  memberId: string;
+  memberId: number;
   registrationDate: string;
 }
 

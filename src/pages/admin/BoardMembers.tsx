@@ -51,6 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { BoardMember, BoardMemberRequest } from "@/types/api";
 import { boardMemberService } from "@/services/boardMemberService";
+import { memberService } from "@/services/memberService";
 
 // Form schema for validation
 const formSchema = z.object({
@@ -100,6 +101,11 @@ const BoardMembers = () => {
         return [] as BoardMember[];
       }
     },
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ["members"],
+    queryFn: memberService.getAllMembers,
   });
 
   const handleAddNew = () => {
@@ -263,9 +269,9 @@ const BoardMembers = () => {
                           <TableCell className="font-medium">
                             {member.position}
                           </TableCell>
-                          <TableCell>
+                          {/* <TableCell>
                             {format(new Date(member.createdAt), "MMM d, yyyy")}
-                          </TableCell>
+                          </TableCell> */}
                           {/* <TableCell>
                             {member.endDate
                               ? format(new Date(member.endDate), "MMM d, yyyy")
@@ -335,14 +341,29 @@ const BoardMembers = () => {
                   name="memberId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Member ID</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter member ID"
-                          {...field}
-                        />
-                      </FormControl>
+                      <FormLabel>Member</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
+                        defaultValue={field.value.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {members?.map((member) => (
+                            <SelectItem
+                              key={member.memberId}
+                              value={member.memberId.toString()}
+                            >
+                              {member.firstName} {member.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -360,7 +381,7 @@ const BoardMembers = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="startDate"
                   render={({ field }) => (
@@ -388,7 +409,7 @@ const BoardMembers = () => {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
                 <FormField
                   control={form.control}
                   name="status"

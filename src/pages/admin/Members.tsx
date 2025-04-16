@@ -40,7 +40,7 @@ import { Edit, User, UserCheck, UserMinus, UserPlus } from "lucide-react";
 
 // Form schema for member details - making all fields required to match MemberRequest
 const memberFormSchema = z.object({
-  id: z.number(),
+  memberId: z.number(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
@@ -70,7 +70,7 @@ const Members = () => {
   const memberForm = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
-      id: 0,
+      memberId: 0,
       firstName: "",
       lastName: "",
       email: "",
@@ -108,7 +108,7 @@ const Members = () => {
 
   const handleEditMember = (member: Member) => {
     memberForm.reset({
-      id: member.id,
+      memberId: member.memberId,
       firstName: member.firstName,
       lastName: member.lastName,
       email: member.email,
@@ -153,7 +153,7 @@ const Members = () => {
     try {
       // Ensure all required fields are provided before submitting
       const memberRequest = {
-        id: values.id,
+        memberId: values.memberId,
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
@@ -191,7 +191,7 @@ const Members = () => {
       };
 
       const result = await memberService.suspendMember(
-        selectedMember.id,
+        selectedMember.memberId,
         suspensionRequest
       );
       toast({

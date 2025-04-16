@@ -455,8 +455,8 @@ const Savings = () => {
                       <SelectContent>
                         {members?.map((member) => (
                           <SelectItem
-                            key={member.id}
-                            value={member.id.toString()}
+                            key={member.memberId}
+                            value={member.memberId.toString()}
                           >
                             {member.firstName} {member.lastName}
                           </SelectItem>
