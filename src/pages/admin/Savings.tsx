@@ -219,7 +219,7 @@ const Savings = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-4 space-y-4">
+      <div className="container mx-auto py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>

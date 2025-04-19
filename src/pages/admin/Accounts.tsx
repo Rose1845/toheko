@@ -1,14 +1,26 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import DashboardLayout from '@/pages/admin/DashboardLayout';
-import { accountService } from '@/services/accountService';
-import { Account } from '@/types/api';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import DashboardLayout from "@/pages/admin/DashboardLayout";
+import { accountService } from "@/services/accountService";
+import { Account } from "@/types/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -23,11 +35,12 @@ const Accounts = () => {
         const data = await accountService.getAllAccounts();
         setAccounts(data);
       } catch (error) {
-        console.error('Error fetching accounts:', error);
+        console.error("Error fetching accounts:", error);
         toast({
-          title: 'Error fetching accounts',
-          description: 'There was an error loading the accounts. Please try again.',
-          variant: 'destructive',
+          title: "Error fetching accounts",
+          description:
+            "There was an error loading the accounts. Please try again.",
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -49,9 +62,11 @@ const Accounts = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="container mx-auto py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Accounts Management</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            Accounts Management
+          </h1>
           <p className="text-gray-500">View and manage all SACCO accounts</p>
         </div>
 
@@ -83,15 +98,25 @@ const Accounts = () => {
                       <TableCell>{account.accountType}</TableCell>
                       <TableCell>{formatCurrency(account.balance)}</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={account.status === 'ACTIVE' ? 'default' : 'destructive'}
+                        <Badge
+                          variant={
+                            account.status === "ACTIVE"
+                              ? "default"
+                              : "destructive"
+                          }
                         >
                           {account.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(account.dateCreated).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(account)}>
+                        {new Date(account.dateCreated).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(account)}
+                        >
                           View Details
                         </Button>
                       </TableCell>
@@ -119,7 +144,9 @@ const Accounts = () => {
                     <p>{selectedAccount.id}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-500">Account Number</h3>
+                    <h3 className="font-medium text-gray-500">
+                      Account Number
+                    </h3>
                     <p>{selectedAccount.accountNumber}</p>
                   </div>
                   <div>
@@ -136,15 +163,23 @@ const Accounts = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Status</h3>
-                    <Badge 
-                      variant={selectedAccount.status === 'ACTIVE' ? 'default' : 'destructive'}
+                    <Badge
+                      variant={
+                        selectedAccount.status === "ACTIVE"
+                          ? "default"
+                          : "destructive"
+                      }
                     >
                       {selectedAccount.status}
                     </Badge>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Date Created</h3>
-                    <p>{new Date(selectedAccount.dateCreated).toLocaleDateString()}</p>
+                    <p>
+                      {new Date(
+                        selectedAccount.dateCreated
+                      ).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>

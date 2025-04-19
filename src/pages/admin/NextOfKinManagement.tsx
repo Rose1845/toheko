@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/select";
 import { memberService } from "@/services/memberService";
 
-// Schema for validation
 const nextOfKinSchema = z.object({
   memberId: z.number({ required_error: "Member ID is required" }),
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -71,13 +70,11 @@ const NextOfKinManagement = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch all next of kin
   const { data: nextOfKins = [], isLoading } = useQuery({
     queryKey: ["nextOfKins"],
     queryFn: nextOfKinService.getAllNextOfKins,
   });
 
-  // Create mutation
   const createMutation = useMutation({
     mutationFn: nextOfKinService.createNextOfKin,
     onSuccess: () => {
@@ -136,7 +133,6 @@ const NextOfKinManagement = () => {
       setFormData({ ...formData, [name]: value });
     }
 
-    // Clear error when user changes input
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
@@ -291,61 +287,33 @@ const NextOfKinManagement = () => {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              {/* <div className="grid items-center gap-2">
-                <Label htmlFor="memberId">Member ID</Label>
-                {members?.map((member) => (
-                  <Input
-                    key={member.memberId}
-                    id="memberId"
-                    name="memberId"
-                    type="number"
-                    value={formData.memberId || ""}
-                    onChange={handleInputChange}
-                    className={formErrors.memberId ? "border-red-500" : ""}
-                  />
-                ))}
-                <Input
-                  id="memberId"
-                  name="memberId"
-                  type="number"
-                  value={formData.memberId || ""}
-                  onChange={handleInputChange}
-                  className={formErrors.memberId ? "border-red-500" : ""}
-                />
+              <div className="grid items-center gap-2">
+                <Label htmlFor="memberId">Member</Label>
+                <Select
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, memberId: parseInt(value) })
+                  }
+                  value={formData.memberId ? formData.memberId.toString() : ""}
+                >
+                  <SelectTrigger id="memberId">
+                    <SelectValue placeholder="Select a member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members?.map((member) => (
+                      <SelectItem
+                        key={member.memberId}
+                        value={member.memberId.toString()}
+                      >
+                        {`${member.firstName} ${member.lastName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {formErrors.memberId && (
                   <p className="text-sm text-red-500">{formErrors.memberId}</p>
                 )}
-              </div> */}
-              <FormField
-                control={formData}
-                name="memberId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Member</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {members?.map((member) => (
-                          <SelectItem
-                            key={member.memberId}
-                            value={member.memberId.toString()}
-                          >
-                            {member.firstName} {member.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid items-center gap-2">
                   <Label htmlFor="firstName">First Name</Label>

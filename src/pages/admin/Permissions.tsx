@@ -179,7 +179,7 @@ const Permissions = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-4 space-y-4">
+      <div className="container mx-auto py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -203,7 +203,10 @@ const Permissions = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...addForm}>
-                  <form onSubmit={addForm.handleSubmit(onSubmitAdd)} className="space-y-4">
+                  <form
+                    onSubmit={addForm.handleSubmit(onSubmitAdd)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={addForm.control}
                       name="name"
@@ -211,7 +214,10 @@ const Permissions = () => {
                         <FormItem>
                           <FormLabel>Permission Name</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Enter permission name" />
+                            <Input
+                              {...field}
+                              placeholder="Enter permission name"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -224,7 +230,10 @@ const Permissions = () => {
                         <FormItem>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="Describe what this permission allows" />
+                            <Textarea
+                              {...field}
+                              placeholder="Describe what this permission allows"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -236,7 +245,10 @@ const Permissions = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select status" />
@@ -253,7 +265,7 @@ const Permissions = () => {
                     />
                     <DialogFooter>
                       <Button type="submit" disabled={createMutation.isPending}>
-                        {createMutation.isPending ? 'Saving...' : 'Save'}
+                        {createMutation.isPending ? "Saving..." : "Save"}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -281,15 +293,25 @@ const Permissions = () => {
                   {permissions.map((permission) => (
                     <TableRow key={permission.id}>
                       <TableCell>{permission.id}</TableCell>
-                      <TableCell className="font-medium">{permission.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {permission.name}
+                      </TableCell>
                       <TableCell>{permission.description}</TableCell>
                       <TableCell>{permission.status}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="icon" onClick={() => handleEdit(permission)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEdit(permission)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDelete(permission.id)}>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => handleDelete(permission.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -301,7 +323,9 @@ const Permissions = () => {
             ) : (
               <div className="text-center py-10">
                 <Shield className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No permissions found</h3>
+                <h3 className="mt-4 text-lg font-semibold">
+                  No permissions found
+                </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Start by creating a new permission to manage system access.
                 </p>
@@ -316,12 +340,13 @@ const Permissions = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Permission</DialogTitle>
-            <DialogDescription>
-              Update permission details.
-            </DialogDescription>
+            <DialogDescription>Update permission details.</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(onSubmitEdit)}
+              className="space-y-4"
+            >
               <FormField
                 control={editForm.control}
                 name="name"
@@ -342,7 +367,10 @@ const Permissions = () => {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Describe what this permission allows" />
+                      <Textarea
+                        {...field}
+                        placeholder="Describe what this permission allows"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -354,7 +382,10 @@ const Permissions = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -371,7 +402,7 @@ const Permissions = () => {
               />
               <DialogFooter>
                 <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Updating...' : 'Update'}
+                  {updateMutation.isPending ? "Updating..." : "Update"}
                 </Button>
               </DialogFooter>
             </form>

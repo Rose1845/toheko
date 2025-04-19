@@ -24,6 +24,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Loans = () => {
+  const [showForm, setShowForm] = useState(false);
+  const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
+
   const [loans, setLoans] = useState<LoanApplication[]>([]);
   const [loanTypes, setLoanTypes] = useState<LoanType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,7 @@ const Loans = () => {
         const [loansData, loanTypesData] = await Promise.all([
           loanService.getAllLoanApplications(),
           loanService.getAllLoanTypes(),
+          // loanService.getLoanMemberById(),
         ]);
         setLoans(loansData);
         setLoanTypes(loanTypesData);
@@ -64,13 +68,11 @@ const Loans = () => {
     setShowDetails(true);
   };
 
-  // Get loan type name by ID
   const getLoanTypeName = (loanTypeId: number): string => {
     const loanType = loanTypes.find((type) => type.id === loanTypeId);
     return loanType ? loanType.name : "Unknown";
   };
 
-  // Status badge variant
   const getStatusVariant = (status: string) => {
     switch (status.toUpperCase()) {
       case "APPROVED":
@@ -86,7 +88,7 @@ const Loans = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="container mx-auto py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
             Loans Management
@@ -94,6 +96,17 @@ const Loans = () => {
           <p className="text-gray-500">
             View and manage all loan applications and loan types
           </p>
+        </div>
+
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setEditLoan(null);
+            }}
+          >
+            + Add Loan
+          </Button>
         </div>
 
         <Tabs
@@ -119,37 +132,33 @@ const Loans = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Member ID</TableHead>
-                        <TableHead>Loan Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Tenure (months)</TableHead>
+                        <TableHead>LoanApplicationCode</TableHead>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Loan AMount</TableHead>
+                        <TableHead>MonthlyRepayment</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Date Applied</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loans.map((loan) => (
-                        <TableRow key={loan.id}>
-                          <TableCell>{loan.id}</TableCell>
+                        <TableRow key={loan.loanApplicationId}>
+                          <TableCell>{loan.loanApplicationCode}</TableCell>
                           <TableCell>{loan.memberId}</TableCell>
                           <TableCell>
-                            {getLoanTypeName(loan.loanTypeId)}
+                            KSH {loan.loanAmount.toLocaleString()}
                           </TableCell>
                           <TableCell>
-                            KSH {loan.amount.toLocaleString()}
+                            KSH {loan.monthlyRepayment.toLocaleString()}
                           </TableCell>
-                          <TableCell>{loan.tenure}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusVariant(loan.status)}>
-                              {loan.status}
+                            <Badge variant={getStatusVariant(loan.loanStatus)}>
+                              {loan.loanStatus}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(
-                              loan.applicationDate
-                            ).toLocaleDateString()}
+                            {new Date(loan.dateApplied).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -157,7 +166,18 @@ const Loans = () => {
                               size="sm"
                               onClick={() => handleViewDetails(loan)}
                             >
-                              View Details
+                              View
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditLoan(loan);
+                                setShowForm(true);
+                              }}
+                            >
+                              Edit
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -237,47 +257,202 @@ const Loans = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-500">Loan ID</h3>
-                    <p>{selectedLoan.id}</p>
+                    <p>{selectedLoan.loanApplicationId}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Member ID</h3>
                     <p>{selectedLoan.memberId}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <h3 className="font-medium text-gray-500">Loan Type</h3>
                     <p>{getLoanTypeName(selectedLoan.loanTypeId)}</p>
-                  </div>
+                  </div> */}
                   <div>
                     <h3 className="font-medium text-gray-500">
                       Application Date
                     </h3>
                     <p>
-                      {new Date(
-                        selectedLoan.applicationDate
-                      ).toLocaleDateString()}
+                      {new Date(selectedLoan.dateApplied).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Amount</h3>
-                    <p>KSH {selectedLoan.amount.toLocaleString()}</p>
+                    <p>KSH {selectedLoan.loanAmount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-500">Tenure</h3>
-                    <p>{selectedLoan.tenure} months</p>
+                    <h3 className="font-medium text-gray-500">
+                      Monthly Repayment
+                    </h3>
+                    <p>KSH {selectedLoan.monthlyRepayment.toLocaleString()}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Status</h3>
-                    <Badge variant={getStatusVariant(selectedLoan.status)}>
-                      {selectedLoan.status}
+                    <Badge variant={getStatusVariant(selectedLoan.loanStatus)}>
+                      {selectedLoan.loanStatus}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-500">Purpose</h3>
-                  <p>{selectedLoan.purpose}</p>
+                  <p>{selectedLoan.loanPurpose}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-500">Remarks</h3>
+                  <p>{selectedLoan.remarks}</p>
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>{editLoan ? "Update Loan" : "New Loan"}</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const formData = new FormData(form);
+                const payload = {
+                  memberId: Number(formData.get("memberId")),
+                  loanApplicationId: formData.get("loanApplicationId"),
+                  loanApplicationCode: formData.get("loanApplicationCode"),
+                  dateApplied: formData.get("dateApplied"),
+                  approvedDate: formData.get("approvedDate"),
+                  loanStatus: formData.get("loanStatus"),
+                  loanTypeId: Number(formData.get("loanTypeId")),
+                  paymentTypeId: Number(formData.get("paymentTypeId")),
+                  monthlyRepayment: Number(formData.get("monthlyRepayment")),
+                  loanAmount: Number(formData.get("loanAmount")),
+                  loanPurpose: formData.get("loanPurpose"),
+                  remarks: formData.get("remarks"),
+                };
+
+                try {
+                  if (editLoan) {
+                    await loanService.updateLoanApplication(payload);
+                    toast({ title: "Loan updated successfully." });
+                  } else {
+                    await loanService.createLoanApplication(payload);
+                    toast({ title: "Loan added successfully." });
+                  }
+                  setShowForm(false);
+                  setLoading(true); // Refresh
+                  const data = await loanService.getAllLoanApplications();
+                  setLoans(data);
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to submit loan.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="grid gap-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Member ID
+                </label>
+                <input
+                  type="text"
+                  name="memberId"
+                  defaultValue={editLoan?.memberId || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Payment Type
+                </label>
+                <input
+                  type="text"
+                  name="paymentTypeId"
+                  defaultValue={editLoan?.paymentTypeId || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  required
+                />
+              </div>
+
+              {/* <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Loan Type
+                </label>
+                <select
+                  name="loanTypeId"
+                  defaultValue={editLoan?.loanTypeId || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  required
+                >
+                  <option value="">Select Type</option>
+                  {loanTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div> */}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Loan Amount
+                </label>
+                <input
+                  type="number"
+                  name="loanAmount"
+                  defaultValue={editLoan?.loanAmount || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Monthy Repayment
+                </label>
+                <input
+                  type="number"
+                  name="monthlyRepayment"
+                  defaultValue={editLoan?.monthlyRepayment || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Loan Purpose
+                </label>
+                <textarea
+                  name="loanPurpose"
+                  defaultValue={editLoan?.loanPurpose || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Remarks
+                </label>
+                <textarea
+                  name="remarks"
+                  defaultValue={editLoan?.remarks || ""}
+                  className="mt-1 block w-full border rounded-md p-2"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button type="submit">
+                  {editLoan ? "Update Loan" : "Add Loan"}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

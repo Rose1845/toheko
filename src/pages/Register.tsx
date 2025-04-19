@@ -105,7 +105,7 @@ const Register = () => {
         userLastname: formData.userLastname,
         userEmail: formData.userEmail,
         userPhoneNumber: formData.userPhoneNumber,
-        userUsername: formData.userUsername,
+        userUsername: formData.userEmail,
         userIdNumber: formData.userIdNumber,
         userPassword: formData.userPassword,
         roleId: 1,

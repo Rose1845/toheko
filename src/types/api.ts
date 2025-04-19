@@ -78,18 +78,22 @@ export interface LoanType {
 
 export interface LoanApplicationRequest {
   id?: number;
+  loanPurpose: string;
+  loanApplicationId: number;
+  loanApplicationCode: string;
+  loanAmount: number;
   memberId: number;
-  loanTypeId: number;
-  amount: number;
-  tenure: number;
-  purpose: string;
-  status?: string;
+  paymentTypeId: number;
+  monthlyRepayment: number;
+  loanStatus: "Pending" | "Approved" | "Rejected"; // if possible, use a union type
+  dateApplied: string;
+  approvedDate: string | null;
+  remarks: string;
 }
 
 export interface LoanApplication extends LoanApplicationRequest {
   id: number;
   applicationDate: string;
-  status: string;
 }
 
 export interface LoanApprovalRequest {

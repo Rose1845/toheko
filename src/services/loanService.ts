@@ -6,7 +6,8 @@ import {
   LoanApplication, 
   AcknowledgementResponse, 
   AcknowledgementResponseObject,
-  LoanApprovalRequest 
+  LoanApprovalRequest, 
+  Member
 } from '../types/api';
 
 export const loanService = {
@@ -17,11 +18,22 @@ export const loanService = {
     
     return response.data.content;
   },
+  createLoanApplication: async (data): Promise<LoanApplicationRequest>=>{
+    const response = await apiClient.put(`/api/v1/loans/apply`, data);
+    return response.data;
+  },
 
   getLoanTypeById: async (id: number): Promise<LoanType> => {
     const response = await apiClient.get(`/api/v1/loan-types/${id}`);
     return response.data;
   },
+
+
+   getLoanMemberById: async (id: number): Promise<Member> => {
+      const response = await apiClient.get(`/api/v1/members/${id}`);
+    
+      return response.data;
+    },
 
   updateLoanType: async (id: number, loanType: LoanType): Promise<AcknowledgementResponseObject> => {
     const response = await apiClient.put(`/api/v1/loan-types/${id}`, loanType);
