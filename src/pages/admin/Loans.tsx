@@ -22,6 +22,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { memberService } from "@/services/memberService";
+import { paymentTypeService } from "@/services/paymentTypeService";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
@@ -37,6 +40,15 @@ const Loans = () => {
   const [activeTab, setActiveTab] = useState("applications");
   const { toast } = useToast();
 
+  const { data: members } = useQuery({
+    queryKey: ["members"],
+    queryFn: memberService.getAllMembers,
+  });
+
+  const { data: paymenttypes } = useQuery({
+    queryKey: ["payment-types"],
+    queryFn: paymentTypeService.getAllPaymentTypes,
+  });
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -352,7 +364,7 @@ const Loans = () => {
               }}
               className="grid gap-4"
             >
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Member ID
                 </label>
@@ -363,39 +375,57 @@ const Loans = () => {
                   className="mt-1 block w-full border rounded-md p-2"
                   required
                 />
-              </div>
+              </div> */}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Payment Type
-                </label>
-                <input
-                  type="text"
-                  name="paymentTypeId"
-                  defaultValue={editLoan?.paymentTypeId || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  required
-                />
-              </div>
-
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Loan Type
+              <div className="mb-4">
+                <label
+                  htmlFor="memberId"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Select Member
                 </label>
                 <select
-                  name="loanTypeId"
-                  defaultValue={editLoan?.loanTypeId || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
+                  name="memberId"
+                  id="memberId"
+                  defaultValue={editLoan?.memberId || ""}
                   required
+                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                 >
-                  <option value="">Select Type</option>
-                  {loanTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
+                  <option value="" disabled>
+                    -- Select Member --
+                  </option>
+                  {members.map((member) => (
+                    <option key={member.memberId} value={member.memberId}>
+                      {member.firstName} {member.lastName}
                     </option>
                   ))}
                 </select>
-              </div> */}
+              </div>
+
+              <div className="mb-4">
+                <label
+                  htmlFor="paymentTypeId"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Payment Type
+                </label>
+                <select
+                  name="paymentTypeId"
+                  id="paymentTypeId"
+                  defaultValue={editLoan?.paymentTypeId || ""}
+                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                >
+                  <option value="" disabled>
+                    Select Payment Type
+                  </option>
+                  {paymenttypes.map((pt) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
