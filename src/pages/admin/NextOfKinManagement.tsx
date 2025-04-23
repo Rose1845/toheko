@@ -74,6 +74,7 @@ const NextOfKinManagement = () => {
     queryKey: ["nextOfKins"],
     queryFn: nextOfKinService.getAllNextOfKins,
   });
+  console.log({ nextOfKins });
 
   const createMutation = useMutation({
     mutationFn: nextOfKinService.createNextOfKin,
@@ -227,7 +228,6 @@ const NextOfKinManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Member ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Relationship</TableHead>
@@ -240,8 +240,7 @@ const NextOfKinManagement = () => {
                 {nextOfKins.length > 0 ? (
                   nextOfKins.map((kin) => (
                     <TableRow key={kin.nextOfKinId}>
-                      <TableCell>{kin.nextOfKinId}</TableCell>
-                      <TableCell>{kin.memberId}</TableCell>
+                      <TableCell>{`${kin?.member?.firstName} ${kin?.member.lastName}`}</TableCell>
                       <TableCell>{`${kin.firstName} ${kin.lastName}`}</TableCell>
                       <TableCell>{kin.relationship}</TableCell>
                       <TableCell>{kin.phoneNumber}</TableCell>

@@ -85,7 +85,7 @@ export interface LoanApplicationRequest {
   memberId: number;
   paymentTypeId: number;
   monthlyRepayment: number;
-  loanStatus: "Pending" | "Approved" | "Rejected"; // if possible, use a union type
+  loanStatus: string;
   dateApplied: string;
   approvedDate: string | null;
   remarks: string;
@@ -200,6 +200,7 @@ export interface ModeOfPaymentDto {
 export interface NextOfKin {
   nextOfKinId: number;
   memberId: number;
+  member: Member;
   firstName: string;
   lastName: string;
   relationship: string;

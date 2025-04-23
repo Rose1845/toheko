@@ -44,6 +44,10 @@ const Loans = () => {
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
+  const getMemberName = (memberId: number) => {
+    const member = members?.find((m) => m.memberId === memberId);
+    return member ? `${member.firstName} ${member.lastName}` : "Unknown Member";
+  };
 
   const { data: paymenttypes } = useQuery({
     queryKey: ["payment-types"],
@@ -55,7 +59,6 @@ const Loans = () => {
         const [loansData, loanTypesData] = await Promise.all([
           loanService.getAllLoanApplications(),
           loanService.getAllLoanTypes(),
-          // loanService.getLoanMemberById(),
         ]);
         setLoans(loansData);
         setLoanTypes(loanTypesData);
@@ -157,7 +160,7 @@ const Loans = () => {
                       {loans.map((loan) => (
                         <TableRow key={loan.loanApplicationId}>
                           <TableCell>{loan.loanApplicationCode}</TableCell>
-                          <TableCell>{loan.memberId}</TableCell>
+                          <TableCell>{getMemberName(loan.memberId)}</TableCell>
                           <TableCell>
                             KSH {loan.loanAmount.toLocaleString()}
                           </TableCell>
@@ -329,17 +332,20 @@ const Loans = () => {
                 const formData = new FormData(form);
                 const payload = {
                   memberId: Number(formData.get("memberId")),
-                  loanApplicationId: formData.get("loanApplicationId"),
-                  loanApplicationCode: formData.get("loanApplicationCode"),
-                  dateApplied: formData.get("dateApplied"),
-                  approvedDate: formData.get("approvedDate"),
-                  loanStatus: formData.get("loanStatus"),
-                  loanTypeId: Number(formData.get("loanTypeId")),
+                  loanApplicationId: editLoan?.loanApplicationId ?? undefined,
+                  loanApplicationCode:
+                    formData.get("loanApplicationCode")?.toString() || "",
+                  dateApplied: formData.get("dateApplied")?.toString() || "",
+                  approvedDate:
+                    formData.get("approvedDate")?.toString() || null,
                   paymentTypeId: Number(formData.get("paymentTypeId")),
-                  monthlyRepayment: Number(formData.get("monthlyRepayment")),
+                  loanStatus:
+                    formData.get("loanStatus")?.toString() || "PENDING",
+                  loanTypeId: Number(formData.get("loanTypeId")),
                   loanAmount: Number(formData.get("loanAmount")),
-                  loanPurpose: formData.get("loanPurpose"),
-                  remarks: formData.get("remarks"),
+                  monthlyRepayment: Number(formData.get("monthlyRepayment")),
+                  loanPurpose: formData.get("loanPurpose")?.toString() || "",
+                  remarks: formData.get("remarks")?.toString() || "",
                 };
 
                 try {
@@ -394,7 +400,7 @@ const Loans = () => {
                   <option value="" disabled>
                     -- Select Member --
                   </option>
-                  {members.map((member) => (
+                  {members?.map((member) => (
                     <option key={member.memberId} value={member.memberId}>
                       {member.firstName} {member.lastName}
                     </option>
@@ -419,7 +425,7 @@ const Loans = () => {
                   <option value="" disabled>
                     Select Payment Type
                   </option>
-                  {paymenttypes.map((pt) => (
+                  {paymenttypes?.map((pt) => (
                     <option key={pt.id} value={pt.id}>
                       {pt.name}
                     </option>

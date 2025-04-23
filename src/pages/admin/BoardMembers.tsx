@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Edit, Trash, Plus, Loader2 } from "lucide-react";
@@ -107,6 +107,19 @@ const BoardMembers = () => {
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
+
+  const enrichedBoardMembers = useMemo(() => {
+    if (!boardMembers || !members) return [];
+    return boardMembers.map((bm) => {
+      const member = members.find((m) => m.memberId === bm.memberId);
+      return {
+        ...bm,
+        fullName: member
+          ? `${member.firstName} ${member.lastName}`
+          : "Unknown Member",
+      };
+    });
+  }, [boardMembers, members]);
 
   const handleAddNew = () => {
     form.reset({
@@ -251,32 +264,22 @@ const BoardMembers = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Member ID</TableHead>
+                      <TableHead>Member</TableHead>
                       <TableHead>Position</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      {/* <TableHead>End Date</TableHead> */}
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {boardMembers && boardMembers.length > 0 ? (
-                      boardMembers.map((member) => (
+                    {enrichedBoardMembers &&
+                    enrichedBoardMembers?.length > 0 ? (
+                      enrichedBoardMembers?.map((member) => (
                         <TableRow key={member.id}>
-                          <TableCell>{member.id}</TableCell>
-                          <TableCell>{member.memberId}</TableCell>
+                          <TableCell>{member.fullName}</TableCell>
                           <TableCell className="font-medium">
                             {member.position}
                           </TableCell>
-                          {/* <TableCell>
-                            {format(new Date(member.createdAt), "MMM d, yyyy")}
-                          </TableCell> */}
-                          {/* <TableCell>
-                            {member.endDate
-                              ? format(new Date(member.endDate), "MMM d, yyyy")
-                              : "-"}
-                          </TableCell> */}
+
                           <TableCell>
                             <Badge
                               variant="outline"
@@ -381,35 +384,7 @@ const BoardMembers = () => {
                     </FormItem>
                   )}
                 />
-                {/* <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Leave blank if this is a current position
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                /> */}
+
                 <FormField
                   control={form.control}
                   name="status"

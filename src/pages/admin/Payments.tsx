@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Payment } from "@/types/api";
+import { useQuery } from "@tanstack/react-query";
+import { paymentTypeService } from "@/services/paymentTypeService";
 
 const Payments = () => {
   const [activeTab, setActiveTab] = useState("payments");
@@ -53,7 +55,10 @@ const Payments = () => {
 
     fetchPayments();
   }, [toast]);
-
+  const { data: paymenttypes } = useQuery({
+    queryKey: ["payment-types"],
+    queryFn: paymentTypeService.getAllPaymentTypes,
+  });
   const handleViewDetails = (payment: any) => {
     setSelectedPayment(payment);
     setShowDetails(true);
