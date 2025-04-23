@@ -25,14 +25,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Payment } from "@/types/api";
 import { useQuery } from "@tanstack/react-query";
 import { paymentTypeService } from "@/services/paymentTypeService";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "@/components/ui/input";
+import { Vault } from "lucide-react";
 
 const Payments = () => {
   const [activeTab, setActiveTab] = useState("payments");
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
+  const [showAddPaymentTypeDialog, setShowAddPaymentTypeDialog] =
+    useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
+  const paymentFormSchema = z.object({
+    remarks: z.string().optional(),
+    phoneNumber: z.string(),
+    modeOfPaymentId: z.coerce.number(),
+    amount: z.coerce.number().positive("Amount must be positive"),
+    accountId: z.coerce.number().positive("Member ID is required"),
+  });
+
+  const paymentTypeFormSchema = z.object({
+    name: z.string().min(3, "Name is required"),
+    paymentShortDesc: z.string().optional(),
+    paymentDescription: z.string().optional(),
+  });
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -64,11 +85,48 @@ const Payments = () => {
     setShowDetails(true);
   };
 
+  type PaymentFormValues = z.infer<typeof paymentFormSchema>;
+  type PaymentTypeFormValues = z.infer<typeof paymentTypeFormSchema>;
+
+  const paymentForm = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentFormSchema),
+    defaultValues: {
+      phoneNumber: "",
+      amount: 0,
+      accountId: 0,
+    },
+  });
+
+  const paymentTypeForm = useForm<PaymentTypeFormValues>({
+    resolver: zodResolver(paymentTypeFormSchema),
+    defaultValues: {
+      name: "",
+      paymentShortDesc: "",
+      paymentDescription: "",
+    },
+  });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-KE", {
       style: "currency",
       currency: "KES",
     }).format(amount);
+  };
+
+  const onSubmitPayment = async (values: PaymentFormValues) => {
+    console.log("Submitting Payment:", values);
+    await paymentService.createPayment(values);
+    toast({ title: "Payment Added" });
+    setShowAddPaymentDialog(false);
+    paymentForm.reset();
+  };
+
+  const onSubmitPaymentType = async (values: PaymentTypeFormValues) => {
+    console.log("Submitting Payment Type:", values);
+    await paymentTypeService.createPaymentTYpe(values);
+    toast({ title: "Payment Type Added" });
+    setShowAddPaymentTypeDialog(false);
+    paymentTypeForm.reset();
   };
 
   return (
@@ -96,6 +154,12 @@ const Payments = () => {
               <CardHeader>
                 <CardTitle>Payments List</CardTitle>
               </CardHeader>
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddPaymentDialog(true)}>
+                  Add Payment
+                </Button>
+              </div>
+
               <CardContent>
                 {loading ? (
                   <p>Loading payments...</p>
@@ -154,7 +218,140 @@ const Payments = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="types">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Payments Types List</CardTitle>
+              </CardHeader>
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddPaymentTypeDialog(true)}>
+                  Add Payment Type
+                </Button>
+              </div>
+
+              <CardContent>
+                {loading ? (
+                  <p>Loading payments types...</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Payment Description</TableHead>
+                        <TableHead>Short Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paymenttypes?.map((payment) => (
+                        <TableRow key={payment.paymentTypeId}>
+                          <TableCell>{payment.name}</TableCell>
+                          <TableCell>{payment.paymentDescription}</TableCell>
+                          <TableCell>{payment.paymentShortDesc}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDetails(payment)}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+        <Dialog
+          open={showAddPaymentDialog}
+          onOpenChange={setShowAddPaymentDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Payment</DialogTitle>
+              <DialogDescription>
+                Provide payment details below.
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              onSubmit={paymentForm.handleSubmit(onSubmitPayment)}
+              className="space-y-4"
+            >
+              <Input
+                placeholder="Transaction Reference"
+                {...paymentForm.register("phoneNumber")}
+              />
+              {paymentForm.formState.errors.phoneNumber && (
+                <p className="text-red-500 text-sm">
+                  {paymentForm.formState.errors.phoneNumber.message}
+                </p>
+              )}
+
+              <Input
+                type="number"
+                placeholder="Amount"
+                {...paymentForm.register("amount", { valueAsNumber: true })}
+              />
+              {paymentForm.formState.errors.amount && (
+                <p className="text-red-500 text-sm">
+                  {paymentForm.formState.errors.amount.message}
+                </p>
+              )}
+
+              <Input
+                placeholder="accountId ID"
+                type="number"
+                {...paymentForm.register("accountId", { valueAsNumber: true })}
+              />
+              {paymentForm.formState.errors.accountId && (
+                <p className="text-red-500 text-sm">
+                  {paymentForm.formState.errors.accountId.message}
+                </p>
+              )}
+
+              <Button type="submit">Add Payment</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showAddPaymentTypeDialog}
+          onOpenChange={setShowAddPaymentTypeDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Payment Type</DialogTitle>
+              <DialogDescription>Enter payment type details.</DialogDescription>
+            </DialogHeader>
+            <form
+              onSubmit={paymentTypeForm.handleSubmit(onSubmitPaymentType)}
+              className="space-y-4"
+            >
+              <Input placeholder="Name" {...paymentTypeForm.register("name")} />
+              {paymentTypeForm.formState.errors.name && (
+                <p className="text-red-500 text-sm">
+                  {paymentTypeForm.formState.errors.name.message}
+                </p>
+              )}
+
+              <Input
+                placeholder="paymentShortDesc (optional)"
+                {...paymentTypeForm.register("paymentShortDesc")}
+              />
+
+              <Input
+                placeholder="paymentDescription (optional)"
+                {...paymentTypeForm.register("paymentDescription")}
+              />
+              <Button type="submit">Add Payment Type</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent className="sm:max-w-[600px]">

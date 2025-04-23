@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Base response types
 export interface AcknowledgementResponse {
   success: boolean;
   message: string;
@@ -12,7 +11,6 @@ export interface AcknowledgementResponseObject {
   object?: any;
 }
 
-// Authentication types
 export interface AuthenticationRequest {
   username: string;
   password: string;
@@ -37,7 +35,6 @@ export interface AuthenticationResponse {
   roles: string[];
 }
 
-// Member types
 export interface MemberRequest {
   memberId: number;
   firstName: string;
@@ -61,7 +58,6 @@ export interface SuspensionRequest {
   suspendedUntil?: string;
 }
 
-// Loan types
 export interface LoanType {
   id: number;
   name: string;
@@ -105,7 +101,6 @@ export interface LoanApprovalRequest {
   comments?: string;
 }
 
-// Account types
 export interface Account {
   id: number;
   accountNumber: string;
@@ -126,7 +121,6 @@ export interface AccountSuspensionRequest {
   suspendedUntil?: string;
 }
 
-// Account Type definitions
 export interface AccountType {
   id: number;
   name: string;
@@ -151,11 +145,12 @@ export interface Payment {
   id: number;
   memberId: number;
   amount: number;
+  accountId: Account;
   paymentDate: string;
-  paymentTypeId: number;
+  paymentType: PaymentType;
   modeOfPaymentId: number;
   referenceNumber: string;
-  status: string;
+  phoneNumber: string;
   description?: string;
 }
 
@@ -169,17 +164,17 @@ export interface PaymentUpdateDTO {
 }
 
 export interface PaymentType {
-  id: number;
+  paymentTypeId: number;
   name: string;
-  description: string;
-  status: string;
+  paymentShortDesc: string;
+  paymentDescription: string;
 }
 
 export interface PaymentTypeRequest {
-  id: number;
+  paymentTypeId: number;
   name: string;
-  description: string;
-  status: string;
+  paymentShortDesc: string;
+  paymentDescription: string;
 }
 
 // Mode of Payment
