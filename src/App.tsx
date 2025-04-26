@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,8 @@ import Loans from "./pages/admin/Loans";
 import Accounts from "./pages/admin/Accounts";
 import AccountTypes from "./pages/admin/AccountTypes";
 import Payments from "./pages/admin/Payments";
+import PaymentTypes from "./pages/admin/PaymentTypes";
+import PaymentModes from "./pages/admin/PaymentModes";
 import NextOfKinManagement from "./pages/admin/NextOfKinManagement";
 import NotFound from "./pages/NotFound";
 import Permissions from "./pages/admin/Permissions";
@@ -38,6 +39,8 @@ const App = () => (
           <Route path="/admin/accounts" element={<Accounts />} />
           <Route path="/admin/account-types" element={<AccountTypes />} />
           <Route path="/admin/payments" element={<Payments />} />
+          <Route path="/admin/payment-types" element={<PaymentTypes />} />
+          <Route path="/admin/payment-modes" element={<PaymentModes />} />
           <Route path="/admin/next-of-kin" element={<NextOfKinManagement />} />
           <Route path="/admin/permissions" element={<Permissions />} />
           <Route path="/admin/board-members" element={<BoardMembers />} />
