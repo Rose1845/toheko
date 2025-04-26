@@ -179,9 +179,11 @@ export interface PaymentTypeRequest {
 
 // Mode of Payment
 export interface ModeOfPayment {
-  id: number;
+  id?: number;
+  modeOfPaymentId: number;
   name: string;
   description: string;
+  shortDescription?: string;
   status: string;
 }
 

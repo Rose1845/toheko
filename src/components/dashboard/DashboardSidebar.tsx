@@ -13,7 +13,10 @@ import {
   Shield,
   UserCog,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown,
+  Wallet,
+  CreditCard as CreditCardIcon
 } from "lucide-react";
 
 const SidebarLink = ({ to, icon, label, active, collapsed }: { to: string; icon: React.ReactNode; label: string; active: boolean; collapsed: boolean }) => (
@@ -27,6 +30,46 @@ const SidebarLink = ({ to, icon, label, active, collapsed }: { to: string; icon:
     {!collapsed && <span>{label}</span>}
   </Link>
 );
+
+const SidebarSubmenu = ({ 
+  icon, 
+  label, 
+  collapsed, 
+  children 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  collapsed: boolean;
+  children: React.ReactNode;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors
+                   text-muted-foreground hover:bg-muted hover:text-foreground`}
+      >
+        <div className="flex items-center gap-3">
+          {icon}
+          {!collapsed && <span>{label}</span>}
+        </div>
+        {!collapsed && (
+          <ChevronDown
+            className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        )}
+      </button>
+      
+      {(isOpen || collapsed) && (
+        <div className={`pl-${collapsed ? '0' : '6'} space-y-1 mt-1`}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function DashboardSidebar() {
   const location = useLocation();
@@ -148,7 +191,31 @@ export default function DashboardSidebar() {
           <SidebarLink to="/admin/accounts" icon={<PiggyBank className="h-5 w-5" />} label="Accounts" active={isActive("/admin/accounts")} collapsed={collapsed} />
           <SidebarLink to="/admin/account-types" icon={<BookOpen className="h-5 w-5" />} label="Account Types" active={isActive("/admin/account-types")} collapsed={collapsed} />
           <SidebarLink to="/admin/savings" icon={<PiggyBank className="h-5 w-5" />} label="Savings" active={isActive("/admin/savings")} collapsed={collapsed} />
-          <SidebarLink to="/admin/payments" icon={<Receipt className="h-5 w-5" />} label="Payments" active={isActive("/admin/payments")} collapsed={collapsed} />
+          
+          {/* Payments Submenu */}
+          <SidebarSubmenu icon={<Receipt className="h-5 w-5" />} label="Payments" collapsed={collapsed}>
+            <SidebarLink 
+              to="/admin/payments" 
+              icon={<Receipt className="h-5 w-5" />} 
+              label="All Payments" 
+              active={isActive("/admin/payments")} 
+              collapsed={collapsed} 
+            />
+            <SidebarLink 
+              to="/admin/payment-types" 
+              icon={<CreditCardIcon className="h-5 w-5" />} 
+              label="Payment Types" 
+              active={isActive("/admin/payment-types")} 
+              collapsed={collapsed} 
+            />
+            <SidebarLink 
+              to="/admin/payment-modes" 
+              icon={<Wallet className="h-5 w-5" />} 
+              label="Payment Modes" 
+              active={isActive("/admin/payment-modes")} 
+              collapsed={collapsed} 
+            />
+          </SidebarSubmenu>
           
           <div className="pt-4 pb-2">
             {!collapsed && (
