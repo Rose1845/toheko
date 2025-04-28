@@ -271,14 +271,26 @@ export interface SavingRequest {
 
 // Role types
 export interface Role {
-  code: number;
-  name: string;
-  description: string;
-  status: string;
+  roleCode: number;
+  roleName: string;
+  roleShortDesc: string;
+  roleDescription: string;
+  roleStatus: string;
+  createDate?: string;
+  lastModified?: string | null;
+  createdBy?: number | null;
+  lastModifiedBy?: number | null;
+  permissions?: Array<{
+    id: number;
+    permissionName: string;
+    permissionDescription: string;
+  }>;
+  version?: number;
 }
 
 export interface RoleDTO {
-  name: string;
-  description: string;
-  status: string;
+  roleName: string;
+  roleDescription: string;
+  roleStatus: string;
+  permissionIds?: number[];
 }
