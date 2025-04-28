@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
+import axios from "axios";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
@@ -100,6 +101,70 @@ const Loans = () => {
         return "destructive";
       default:
         return "outline";
+    }
+  };
+  const handleApproveLoan = async (loanApplicationId: number) => {
+    try {
+      await loanService.approveLoan(loanApplicationId);
+      toast({
+        title: "Loan Approved",
+        description: "The loan has been successfully approved.",
+      });
+      // Refresh loans
+      const updatedLoans = await loanService.getAllLoanApplications();
+      setLoans(updatedLoans);
+    } catch (error) {
+      console.error("Error approving loan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve the loan. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateRepaymentSchedule = async (loan: LoanApplication) => {
+    console.log("loan", loan);
+
+    const confirmed = window.confirm(
+      "Are you sure you want to generate the repayment schedule?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const params = new URLSearchParams({
+        loanId: loan.loanApplicationId.toString(),
+        loanAmount: loan.loanAmount.toString(),
+        interestRate: Number(10).toString(),
+        termInMonths: loan.monthlyRepayment.toString(),
+        startDate: new Date(loan.dateApplied)
+          .toISOString()
+          .split("T")[0]
+          .replace(/-/g, "/"),
+        interestMethod: "REDUCING_BALANCE",
+      });
+
+      console.log("params", params);
+
+      // await axios.post(
+      //   `https://sacco-app-production.up.railway.app/api/v1/repayment-schedules/generate?${params}`
+      // );
+
+      const repayment = await loanService.generateRepaymentSchedule(params);
+
+      console.log("repayment", repayment);
+
+      toast({
+        title: "Repayment Schedule Generated",
+        description: "The repayment schedule has been successfully generated.",
+      });
+    } catch (error) {
+      console.error("Error generating repayment schedule:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate repayment schedule.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -196,6 +261,29 @@ const Loans = () => {
                             >
                               Edit
                             </Button>
+                            {loan.loanStatus === "Pending" && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() =>
+                                  handleApproveLoan(loan.loanApplicationId)
+                                }
+                              >
+                                Approve
+                              </Button>
+                            )}
+
+                            {loan.loanStatus === "Pending" && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  handleGenerateRepaymentSchedule(loan)
+                                }
+                              >
+                                Generate Repayment Schedule
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -337,7 +425,8 @@ const Loans = () => {
                   loanApplicationId: editLoan?.loanApplicationId ?? undefined,
                   loanApplicationCode:
                     formData.get("loanApplicationCode")?.toString() || "",
-                  dateApplied: formData.get("dateApplied")?.toString() || "",
+                  dateApplied:
+                    formData.get("dateApplied")?.toString() || new Date(),
                   approvedDate:
                     formData.get("approvedDate")?.toString() || null,
                   paymentTypeId: Number(formData.get("paymentTypeId")),

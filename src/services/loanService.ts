@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import apiClient from './api';
 import { 
@@ -20,6 +21,14 @@ export const loanService = {
   },
   createLoanApplication: async (data): Promise<LoanApplicationRequest>=>{
     const response = await apiClient.post(`/api/v1/loans/apply`, data);
+    return response.data;
+  },
+  approveLoan: async (data): Promise<LoanApplicationRequest>=>{
+    const response = await apiClient.post(`/api/v1/loans-approvals/approved`, data);
+    return response.data;
+  },
+  generateRepaymentSchedule: async (data:any): Promise<any>=>{
+    const response = await apiClient.post(`/api/v1/repayment-schedules/generate?data`);
     return response.data;
   },
 
