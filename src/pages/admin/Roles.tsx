@@ -1,17 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roleService } from "@/services/roleService";
 import { Role, RoleDTO } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -30,12 +23,13 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { z } from "zod";
 import DashboardLayout from "./DashboardLayout";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 
 // Schema for validation
 const roleSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().min(5, "Description must be at least 5 characters"),
-  status: z.string(),
+  roleName: z.string().min(2, "Name must be at least 2 characters"),
+  roleDescription: z.string().min(5, "Description must be at least 5 characters"),
+  roleStatus: z.string(),
 });
 
 const Roles = () => {
@@ -46,18 +40,25 @@ const Roles = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<RoleDTO>({
-    name: "",
-    description: "",
-    status: "ACTIVE",
+    roleName: "",
+    roleDescription: "",
+    roleStatus: "ACTIVE",
   });
 
   const queryClient = useQueryClient();
 
   // Fetch all roles
-  const { data: roles = [], isLoading } = useQuery({
+  const { data: roles = [], isLoading, isError, error } = useQuery({
     queryKey: ["roles"],
     queryFn: roleService.getAllRoles,
+    retry: 3,
+    staleTime: 60000, // 1 minute
   });
+
+  // Log roles data for debugging
+  useEffect(() => {
+    console.log("Roles data:", roles);
+  }, [roles]);
 
   // Create mutation
   const createMutation = useMutation({
@@ -76,8 +77,8 @@ const Roles = () => {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: ({ code, data }: { code: number; data: RoleDTO }) =>
-      roleService.updateRole(code, data),
+    mutationFn: ({ roleCode, data }: { roleCode: number; data: RoleDTO }) =>
+      roleService.updateRole(roleCode, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles"] });
       setIsDialogOpen(false);
@@ -92,7 +93,7 @@ const Roles = () => {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (code: number) => roleService.deleteRole(code),
+    mutationFn: (roleCode: number) => roleService.deleteRole(roleCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles"] });
       setIsDeleteDialogOpen(false);
@@ -115,11 +116,11 @@ const Roles = () => {
   };
 
   const handleStatusChange = (value: string) => {
-    setFormData({ ...formData, status: value });
+    setFormData({ ...formData, roleStatus: value });
 
     // Clear error
-    if (formErrors.status) {
-      setFormErrors({ ...formErrors, status: "" });
+    if (formErrors.roleStatus) {
+      setFormErrors({ ...formErrors, roleStatus: "" });
     }
   };
 
@@ -142,12 +143,10 @@ const Roles = () => {
   };
 
   const handleSubmit = () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     if (editingRole) {
-      updateMutation.mutate({ code: editingRole.code, data: formData });
+      updateMutation.mutate({ roleCode: editingRole.roleCode, data: formData });
     } else {
       createMutation.mutate(formData);
     }
@@ -156,38 +155,103 @@ const Roles = () => {
   const handleEdit = (role: Role) => {
     setEditingRole(role);
     setFormData({
-      name: role.name,
-      description: role.description,
-      status: role.status,
+      roleName: role.roleName,
+      roleDescription: role.roleDescription,
+      roleStatus: role.roleStatus,
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (code: number) => {
-    setDeletingRoleCode(code);
+  const handleDelete = (roleCode: number) => {
+    setDeletingRoleCode(roleCode);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
-    if (deletingRoleCode) {
+    if (deletingRoleCode !== null) {
       deleteMutation.mutate(deletingRoleCode);
     }
   };
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      status: "ACTIVE",
+      roleName: "",
+      roleDescription: "",
+      roleStatus: "ACTIVE",
     });
-    setEditingRole(null);
     setFormErrors({});
+    setEditingRole(null);
   };
 
   const openAddDialog = () => {
     resetForm();
     setIsDialogOpen(true);
   };
+
+  // Define columns for the DataTable
+  const columns: Column<Role>[] = [
+    {
+      header: "Code",
+      accessorKey: "roleCode",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "roleName",
+      sortable: true,
+    },
+    {
+      header: "Description",
+      accessorKey: "roleDescription",
+      sortable: true,
+    },
+    {
+      header: "Status",
+      accessorKey: "roleStatus",
+      sortable: true,
+      cell: (role) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            role.roleStatus === "ACTIVE"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {role.roleStatus}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "roleCode",
+      cell: (role) => (
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(role);
+            }}
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(role.roleCode);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <DashboardLayout>
@@ -198,71 +262,34 @@ const Roles = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8">Loading role data...</div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.length > 0 ? (
-                  roles.map((role) => (
-                    <TableRow key={role.code}>
-                      <TableCell>{role.code}</TableCell>
-                      <TableCell>{role.name}</TableCell>
-                      <TableCell>{role.description}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            role.status === "ACTIVE"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {role.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(role)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(role.code)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4">
-                      No roles found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading role data...</span>
           </div>
+        ) : isError ? (
+          <div className="text-center py-8 text-red-500">
+            Error loading roles: {(error as Error)?.message || "Unknown error"}
+          </div>
+        ) : (
+          <DataTable
+            data={Array.isArray(roles) ? roles : []}
+            columns={columns}
+            keyField="roleCode"
+            pagination={true}
+            searchable={true}
+            pageSize={10}
+            pageSizeOptions={[5, 10, 25, 50]}
+            emptyMessage="No roles found"
+            loading={isLoading}
+            onRowClick={handleEdit}
+          />
         )}
 
         {/* Add/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -271,41 +298,41 @@ const Roles = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid items-center gap-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="roleName">Name</Label>
                 <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
+                  id="roleName"
+                  name="roleName"
+                  value={formData.roleName}
                   onChange={handleInputChange}
-                  className={formErrors.name ? "border-red-500" : ""}
+                  className={formErrors.roleName ? "border-red-500" : ""}
                 />
-                {formErrors.name && (
-                  <p className="text-sm text-red-500">{formErrors.name}</p>
+                {formErrors.roleName && (
+                  <p className="text-sm text-red-500">{formErrors.roleName}</p>
                 )}
               </div>
               <div className="grid items-center gap-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="roleDescription">Description</Label>
                 <Input
-                  id="description"
-                  name="description"
-                  value={formData.description}
+                  id="roleDescription"
+                  name="roleDescription"
+                  value={formData.roleDescription}
                   onChange={handleInputChange}
-                  className={formErrors.description ? "border-red-500" : ""}
+                  className={formErrors.roleDescription ? "border-red-500" : ""}
                 />
-                {formErrors.description && (
+                {formErrors.roleDescription && (
                   <p className="text-sm text-red-500">
-                    {formErrors.description}
+                    {formErrors.roleDescription}
                   </p>
                 )}
               </div>
               <div className="grid items-center gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="roleStatus">Status</Label>
                 <Select
-                  value={formData.status}
+                  value={formData.roleStatus}
                   onValueChange={handleStatusChange}
                 >
                   <SelectTrigger
-                    className={formErrors.status ? "border-red-500" : ""}
+                    className={formErrors.roleStatus ? "border-red-500" : ""}
                   >
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -314,8 +341,8 @@ const Roles = () => {
                     <SelectItem value="INACTIVE">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
-                {formErrors.status && (
-                  <p className="text-sm text-red-500">{formErrors.status}</p>
+                {formErrors.roleStatus && (
+                  <p className="text-sm text-red-500">{formErrors.roleStatus}</p>
                 )}
               </div>
             </div>
@@ -323,8 +350,18 @@ const Roles = () => {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                {editingRole ? "Update" : "Add"}
+              <Button 
+                onClick={handleSubmit}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {(createMutation.isPending || updateMutation.isPending) ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {editingRole ? "Updating..." : "Adding..."}
+                  </>
+                ) : (
+                  editingRole ? "Update" : "Add"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -347,8 +384,19 @@ const Roles = () => {
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
+              <Button 
+                variant="destructive" 
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

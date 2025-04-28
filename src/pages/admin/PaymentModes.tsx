@@ -2,14 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -140,24 +133,25 @@ const PaymentModes = () => {
     
     try {
       setSubmitting(true);
+      
       const modeOfPaymentData: ModeOfPaymentFormValues = {
         name: values.name,
         description: values.description || "",
         shortDescription: values.shortDescription
       };
       
-      // Use modeOfPaymentId from the API response instead of id
-      const paymentModeId = selectedPaymentMode.modeOfPaymentId || selectedPaymentMode.id;
-      if (!paymentModeId) {
-        throw new Error("Payment mode ID is undefined");
-      }
+      await modeOfPaymentService.updateModeOfPayment(
+        selectedPaymentMode.modeOfPaymentId,
+        modeOfPaymentData
+      );
       
-      await modeOfPaymentService.updateModeOfPayment(paymentModeId, modeOfPaymentData);
       toast({
         title: "Success",
         description: "Payment mode updated successfully",
       });
+      
       setShowEditDialog(false);
+      editForm.reset();
       fetchPaymentModes();
     } catch (error) {
       console.error("Error updating payment mode:", error);
@@ -176,14 +170,7 @@ const PaymentModes = () => {
     
     try {
       setSubmitting(true);
-      
-      // Use modeOfPaymentId from the API response instead of id
-      const paymentModeId = selectedPaymentMode.modeOfPaymentId || selectedPaymentMode.id;
-      if (!paymentModeId) {
-        throw new Error("Payment mode ID is undefined");
-      }
-      
-      await modeOfPaymentService.deleteModeOfPayment(paymentModeId);
+      await modeOfPaymentService.deleteModeOfPayment(selectedPaymentMode.modeOfPaymentId);
       toast({
         title: "Success",
         description: "Payment mode deleted successfully",
@@ -202,88 +189,136 @@ const PaymentModes = () => {
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Payment Modes</h1>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Payment Mode
+  // Define columns for DataTable
+  const columns: Column<ModeOfPayment>[] = [
+    {
+      header: "ID",
+      accessorKey: "modeOfPaymentId",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "name",
+      sortable: true,
+      cell: (paymentMode) => (
+        <span className="font-medium">{paymentMode.name}</span>
+      ),
+    },
+    {
+      header: "Short Description",
+      accessorKey: "shortDescription",
+      sortable: true,
+      cell: (paymentMode) => (
+        <span>{paymentMode.shortDescription || "-"}</span>
+      ),
+    },
+    {
+      header: "Description",
+      accessorKey: "description",
+      sortable: true,
+      cell: (paymentMode) => (
+        <span>{paymentMode.description || "-"}</span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (paymentMode) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            paymentMode.status === "ACTIVE"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {paymentMode.status || "ACTIVE"}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "modeOfPaymentId",
+      cell: (paymentMode) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPaymentMode(paymentMode);
+              setShowEditDialog(true);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPaymentMode(paymentMode);
+              setShowDeleteDialog(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
           </Button>
         </div>
+      ),
+    },
+  ];
 
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto py-8">
         <Card>
-          <CardHeader>
-            <CardTitle>All Payment Modes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Payment Modes</CardTitle>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Payment Mode
+            </Button>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex justify-center items-center h-40">
+              <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-2">Loading payment modes...</p>
+                <span className="ml-2">Loading payment modes...</span>
               </div>
             ) : paymentModes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 space-y-3">
-                <Wallet className="h-10 w-10 text-muted-foreground" />
-                <p className="text-muted-foreground">No payment modes found</p>
-                <Button variant="outline" onClick={() => setShowAddDialog(true)}>
-                  Add your first payment mode
+              <div className="text-center py-10">
+                <Wallet className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No payment modes found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by creating a new payment mode.
+                </p>
+                <Button 
+                  onClick={() => setShowAddDialog(true)} 
+                  className="mt-4"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Payment Mode
                 </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Short Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paymentModes.map((paymentMode) => (
-                    <TableRow key={paymentMode.modeOfPaymentId}>
-                      <TableCell>{paymentMode.modeOfPaymentId}</TableCell>
-                      <TableCell className="font-medium">{paymentMode.name}</TableCell>
-                      <TableCell>{paymentMode.description || "-"}</TableCell>
-                      <TableCell>{paymentMode.shortDescription || "-"}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={paymentMode.status === "ACTIVE" ? "success" : "destructive"}
-                        >
-                          {paymentMode.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedPaymentMode(paymentMode);
-                              setShowEditDialog(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedPaymentMode(paymentMode);
-                              setShowDeleteDialog(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                data={paymentModes}
+                columns={columns}
+                keyField="modeOfPaymentId"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No payment modes found"
+                loading={loading}
+                onRowClick={(paymentMode) => {
+                  setSelectedPaymentMode(paymentMode);
+                  setShowEditDialog(true);
+                }}
+              />
             )}
           </CardContent>
         </Card>
@@ -294,7 +329,7 @@ const PaymentModes = () => {
             <DialogHeader>
               <DialogTitle>Add Payment Mode</DialogTitle>
               <DialogDescription>
-                Create a new payment mode for the system.
+                Create a new payment mode for transactions.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(handleAddPaymentMode)} className="space-y-4">

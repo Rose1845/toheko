@@ -2,14 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -145,23 +138,25 @@ const PaymentTypes = () => {
     try {
       setSubmitting(true);
       
-      // Create the update payload with the correct structure
-      const updateData = {
-        paymentTypeId: selectedPaymentType.paymentTypeId,
+      // Make sure all required fields are provided
+      const paymentTypeData: PaymentTypeFormValues = {
         name: values.name,
         paymentShortDesc: values.paymentShortDesc || "",
-        paymentDescription: values.paymentDescription || "",
+        paymentDescription: values.paymentDescription || ""
       };
       
-      // Log the data being sent
-      console.log("Sending update with data:", updateData);
+      await paymentTypeService.updatePaymentType(
+        selectedPaymentType.paymentTypeId,
+        paymentTypeData
+      );
       
-      await paymentTypeService.updatePaymentType(updateData);
       toast({
         title: "Success",
         description: "Payment type updated successfully",
       });
+      
       setShowEditDialog(false);
+      editForm.reset();
       fetchPaymentTypes();
     } catch (error) {
       console.error("Error updating payment type:", error);
@@ -199,80 +194,120 @@ const PaymentTypes = () => {
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Payment Types</h1>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Payment Type
+  // Define columns for DataTable
+  const columns: Column<PaymentType>[] = [
+    {
+      header: "ID",
+      accessorKey: "paymentTypeId",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "name",
+      sortable: true,
+      cell: (paymentType) => (
+        <span className="font-medium">{paymentType.name}</span>
+      ),
+    },
+    {
+      header: "Short Description",
+      accessorKey: "paymentShortDesc",
+      sortable: true,
+      cell: (paymentType) => (
+        <span>{paymentType.paymentShortDesc || "-"}</span>
+      ),
+    },
+    {
+      header: "Description",
+      accessorKey: "paymentDescription",
+      sortable: true,
+      cell: (paymentType) => (
+        <span>{paymentType.paymentDescription || "-"}</span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "paymentTypeId",
+      cell: (paymentType) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPaymentType(paymentType);
+              setShowEditDialog(true);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPaymentType(paymentType);
+              setShowDeleteDialog(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
           </Button>
         </div>
+      ),
+    },
+  ];
 
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto py-8">
         <Card>
-          <CardHeader>
-            <CardTitle>All Payment Types</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Payment Types</CardTitle>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Payment Type
+            </Button>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex justify-center items-center h-40">
+              <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-2">Loading payment types...</p>
+                <span className="ml-2">Loading payment types...</span>
               </div>
             ) : paymentTypes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 space-y-3">
-                <CreditCard className="h-10 w-10 text-muted-foreground" />
-                <p className="text-muted-foreground">No payment types found</p>
-                <Button variant="outline" onClick={() => setShowAddDialog(true)}>
-                  Add your first payment type
+              <div className="text-center py-10">
+                <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No payment types found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by creating a new payment type.
+                </p>
+                <Button 
+                  onClick={() => setShowAddDialog(true)} 
+                  className="mt-4"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Payment Type
                 </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Short Description</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paymentTypes.map((paymentType) => (
-                    <TableRow key={paymentType.paymentTypeId}>
-                      <TableCell>{paymentType.paymentTypeId}</TableCell>
-                      <TableCell className="font-medium">{paymentType.name}</TableCell>
-                      <TableCell>{paymentType.paymentShortDesc || "-"}</TableCell>
-                      <TableCell>{paymentType.paymentDescription || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedPaymentType(paymentType);
-                              setShowEditDialog(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedPaymentType(paymentType);
-                              setShowDeleteDialog(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                data={paymentTypes}
+                columns={columns}
+                keyField="paymentTypeId"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No payment types found"
+                loading={loading}
+                onRowClick={(paymentType) => {
+                  setSelectedPaymentType(paymentType);
+                  setShowEditDialog(true);
+                }}
+              />
             )}
           </CardContent>
         </Card>
@@ -283,7 +318,7 @@ const PaymentTypes = () => {
             <DialogHeader>
               <DialogTitle>Add Payment Type</DialogTitle>
               <DialogDescription>
-                Create a new payment type for the system.
+                Create a new payment type for transactions.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(handleAddPaymentType)} className="space-y-4">
