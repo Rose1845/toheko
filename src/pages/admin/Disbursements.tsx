@@ -27,6 +27,8 @@ import { useQuery } from "@tanstack/react-query";
 import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
+import { Column, DataTable } from "@/components/ui/data-table";
+import { Loader2, PiggyBank } from "lucide-react";
 
 const Disbursements = () => {
   const [showForm, setShowForm] = useState(false);
@@ -166,6 +168,178 @@ const Disbursements = () => {
     }
   };
 
+  const columns: Column<LoanApplication>[] = [
+    {
+      header: "ID",
+      accessorKey: "id",
+      sortable: true,
+    },
+    {
+      header: "Member",
+      accessorKey: "memberId",
+      sortable: true,
+      cell: (saving) => {
+        const member = members?.find((m) => m.memberId === saving.memberId);
+        return (
+          <span className="font-medium">
+            {member
+              ? `${member.firstName} ${member.lastName}`
+              : `Member #${saving.memberId}`}
+          </span>
+        );
+      },
+    },
+    {
+      header: "loanApplicationCode",
+      accessorKey: "loanApplicationCode",
+      sortable: true,
+      cell: (loan) => (
+        <span className="font-medium">{loan?.loanApplicationCode}</span>
+      ),
+    },
+    {
+      header: "MonthlyRepayment",
+      accessorKey: "monthlyRepayment",
+      sortable: true,
+      cell: (loan) => <span>{loan?.monthlyRepayment}</span>,
+    },
+    {
+      header: "Date Applied",
+      accessorKey: "dateApplied",
+      sortable: true,
+      cell: (loan) => (
+        <span>{new Date(loan?.dateApplied).toLocaleDateString()}</span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "loanStatus",
+      sortable: true,
+      cell: (loan) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            loan.loanStatus === "Pending"
+              ? "bg-green-100 text-green-800"
+              : loan.loanStatus === "COMPLETED"
+              ? "bg-blue-100 text-blue-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {loan?.loanStatus}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "loanApplicationId",
+      cell: (loan) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleViewDetails(loan)}
+          >
+            View
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setEditLoan(loan);
+              setShowForm(true);
+            }}
+          >
+            Edit
+          </Button>
+          {loan.loanStatus === "Pending" && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleApproveLoan(loan.loanApplicationId)}
+            >
+              Approve
+            </Button>
+          )}
+
+          {loan.loanStatus === "Pending" && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleGenerateRepaymentSchedule(loan)}
+            >
+              Generate Repayment Schedule
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const loantypescolumns: Column<LoanType>[] = [
+    {
+      header: "ID",
+      accessorKey: "id",
+      sortable: true,
+    },
+
+    {
+      header: "Name",
+      accessorKey: "name",
+      sortable: true,
+      cell: (loant) => <span className="font-medium">{loant?.name}</span>,
+    },
+    {
+      header: "MinAmount",
+      accessorKey: "minAmount",
+      sortable: true,
+      cell: (loant) => <span>{loant?.minAmount}</span>,
+    },
+    {
+      header: "Maximum AMount",
+      accessorKey: "maxAmount",
+      sortable: true,
+      cell: (loant) => <span>{loant.maxAmount}</span>,
+    },
+    {
+      header: "InterestRate",
+      accessorKey: "interestRate",
+      sortable: true,
+      cell: (loant) => <span>{loant?.interestRate}</span>,
+    },
+    {
+      header: "Interest Method",
+      accessorKey: "interestMethod",
+      sortable: true,
+      cell: (loant) => <span>{loant?.interestMethod}</span>,
+    },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (loant) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            // onClick={() => handleViewDetails(loan)}
+          >
+            View
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            // onClick={() => {
+            //   setEditLoan(loan);
+            //   setShowForm(true);
+            // }}
+          >
+            Edit
+          </Button>
+        </div>
+      ),
+    },
+  ];
   return (
     <DashboardLayout>
       <div className="container mx-auto py-8">
@@ -207,86 +381,33 @@ const Disbursements = () => {
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <p>Loading loan applications...</p>
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2">Loading Loans...</span>
+                  </div>
+                ) : loans?.length === 0 ? (
+                  <div className="text-center py-10">
+                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">
+                      No loans found
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Get started by applting a new loan.
+                    </p>
+                  </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>LoanApplicationCode</TableHead>
-                        <TableHead>Member</TableHead>
-                        <TableHead>Loan AMount</TableHead>
-                        <TableHead>MonthlyRepayment</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date Applied</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loans.map((loan) => (
-                        <TableRow key={loan.loanApplicationId}>
-                          <TableCell>{loan.loanApplicationCode}</TableCell>
-                          <TableCell>{getMemberName(loan.memberId)}</TableCell>
-                          <TableCell>
-                            KSH {loan.loanAmount.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            KSH {loan.monthlyRepayment.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusVariant(loan.loanStatus)}>
-                              {loan.loanStatus}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(loan.dateApplied).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(loan)}
-                            >
-                              View
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditLoan(loan);
-                                setShowForm(true);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            {loan.loanStatus === "Pending" && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() =>
-                                  handleApproveLoan(loan.loanApplicationId)
-                                }
-                              >
-                                Approve
-                              </Button>
-                            )}
-
-                            {loan.loanStatus === "Pending" && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() =>
-                                  handleGenerateRepaymentSchedule(loan)
-                                }
-                              >
-                                Generate Repayment Schedule
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <DataTable
+                    data={loans}
+                    columns={columns}
+                    keyField="loanApplicationId"
+                    pagination={true}
+                    searchable={true}
+                    pageSize={10}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    emptyMessage="No loans found"
+                    loading={loading}
+                    // onRowClick={(loan) => handleEdit(saving)}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -299,48 +420,30 @@ const Disbursements = () => {
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <p>Loading loan types...</p>
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2">Loading loanTypes...</span>
+                  </div>
+                ) : loanTypes?.length === 0 ? (
+                  <div className="text-center py-10">
+                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">
+                      No loanTypes found
+                    </h3>
+                  </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Interest Rate</TableHead>
-                        <TableHead>Min Amount</TableHead>
-                        <TableHead>Max Amount</TableHead>
-                        <TableHead>Interest Method</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loanTypes.map((type) => (
-                        <TableRow key={type.id}>
-                          <TableCell>{type.id}</TableCell>
-                          <TableCell>{type.name}</TableCell>
-                          <TableCell>{type.interestRate}%</TableCell>
-                          <TableCell>
-                            KSH {type.minAmount.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            KSH {type.maxAmount.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{type.interestMethod}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                type.status === "ACTIVE"
-                                  ? "default"
-                                  : "destructive"
-                              }
-                            >
-                              {type.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <DataTable
+                    data={loanTypes}
+                    columns={loantypescolumns}
+                    keyField="id"
+                    pagination={true}
+                    searchable={true}
+                    pageSize={10}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    emptyMessage="No loanTypes found"
+                    loading={loading}
+                    // onRowClick={(loan) => handleEdit(saving)}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -425,7 +528,7 @@ const Disbursements = () => {
                     formData.get("loanApplicationCode")?.toString() || "",
                   dateApplied:
                     formData.get("dateApplied")?.toString() ||
-                    new Date().toString(),
+                    (new Date() as unknown as string),
                   approvedDate:
                     formData.get("approvedDate")?.toString() || null,
                   paymentTypeId: Number(formData.get("paymentTypeId")),

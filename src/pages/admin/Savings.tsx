@@ -214,7 +214,9 @@ const Savings = () => {
         const member = members?.find((m) => m.memberId === saving.memberId);
         return (
           <span className="font-medium">
-            {member ? `${member.firstName} ${member.lastName}` : `Member #${saving.memberId}`}
+            {member
+              ? `${member.firstName} ${member.lastName}`
+              : `Member #${saving.memberId}`}
           </span>
         );
       },
@@ -228,7 +230,7 @@ const Savings = () => {
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "KES",
-          }).format(saving.savingAmount)}
+          }).format(saving?.savingAmount)}
         </span>
       ),
     },
@@ -237,9 +239,7 @@ const Savings = () => {
       accessorKey: "savingDate",
       sortable: true,
       cell: (saving) => (
-        <span>
-          {new Date(saving.savingDate).toLocaleDateString()}
-        </span>
+        <span>{new Date(saving?.savingDate).toLocaleDateString()}</span>
       ),
     },
     {
@@ -248,7 +248,8 @@ const Savings = () => {
       sortable: true,
       cell: (saving) => (
         <span className="capitalize">
-          {saving.savingMethod.toLowerCase()}
+          {" "}
+          {saving?.savingMethod ? saving.savingMethod.toLowerCase() : "N/A"}
         </span>
       ),
     },
@@ -266,7 +267,7 @@ const Savings = () => {
               : "bg-red-100 text-red-800"
           }`}
         >
-          {saving.status}
+          {saving?.status}
         </span>
       ),
     },
@@ -430,8 +431,12 @@ const Savings = () => {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="ACTIVE">Active</SelectItem>
-                              <SelectItem value="COMPLETED">Completed</SelectItem>
-                              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                              <SelectItem value="COMPLETED">
+                                Completed
+                              </SelectItem>
+                              <SelectItem value="CANCELLED">
+                                Cancelled
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

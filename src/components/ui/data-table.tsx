@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -8,9 +10,9 @@ import {
   TableRow,
   TableCell,
   TableCaption,
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,10 +22,10 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export type SortDirection = 'asc' | 'desc' | null;
+export type SortDirection = "asc" | "desc" | null;
 
 export type AccessorFn<T> = (row: T) => any;
 
@@ -61,13 +63,15 @@ export function DataTable<T>({
   pageSize: initialPageSize = 10,
   pageSizeOptions = [5, 10, 25, 50, 100],
   loading = false,
-  emptyMessage = 'No data available',
+  emptyMessage = "No data available",
   onRowClick,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortColumn, setSortColumn] = useState<keyof T | AccessorFn<T> | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortColumn, setSortColumn] = useState<keyof T | AccessorFn<T> | null>(
+    null
+  );
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   // Reset to first page when data changes
@@ -77,7 +81,7 @@ export function DataTable<T>({
 
   // Helper function to get value from row using accessor
   const getRowValue = (row: T, accessor: keyof T | AccessorFn<T>): any => {
-    if (typeof accessor === 'function') {
+    if (typeof accessor === "function") {
       return accessor(row);
     }
     return row[accessor as keyof T];
@@ -106,14 +110,14 @@ export function DataTable<T>({
       if (aValue === bValue) return 0;
 
       const comparison = aValue < bValue ? -1 : 1;
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [filteredData, sortColumn, sortDirection]);
 
   // Paginate data
   const paginatedData = React.useMemo(() => {
     if (!pagination) return sortedData;
-    
+
     const startIndex = (currentPage - 1) * pageSize;
     return sortedData.slice(startIndex, startIndex + pageSize);
   }, [sortedData, currentPage, pageSize, pagination]);
@@ -124,34 +128,36 @@ export function DataTable<T>({
   // Handle sort
   const handleSort = (column: Column<T>) => {
     if (!column.sortable) return;
-    
+
     const accessorKey = column.accessorKey;
-    
+
     if (sortColumn === accessorKey) {
       // Cycle through: asc -> desc -> null
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
         setSortColumn(null);
         setSortDirection(null);
       }
     } else {
       setSortColumn(accessorKey);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   // Get sort icon
   const getSortIcon = (column: Column<T>) => {
     if (!column.sortable) return null;
-    
+
     if (sortColumn !== column.accessorKey) {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
-    
-    return sortDirection === 'asc' 
-      ? <ArrowUp className="ml-2 h-4 w-4" />
-      : <ArrowDown className="ml-2 h-4 w-4" />;
+
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
   };
 
   // Get cell value
@@ -159,7 +165,7 @@ export function DataTable<T>({
     if (column.cell) {
       return column.cell(row);
     }
-    
+
     return getRowValue(row, column.accessorKey);
   };
 
@@ -185,7 +191,7 @@ export function DataTable<T>({
           <TableHeader>
             <TableRow>
               {columns.map((column, index) => (
-                <TableHead 
+                <TableHead
                   key={index}
                   className={cn(
                     column.sortable && "cursor-pointer select-none",
@@ -204,22 +210,30 @@ export function DataTable<T>({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   Loading...
                 </TableCell>
               </TableRow>
             ) : paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   {emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
               paginatedData.map((row) => (
-                <TableRow 
+                <TableRow
                   key={String(row[keyField])}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={onRowClick ? "cursor-pointer hover:bg-muted/50" : undefined}
+                  className={
+                    onRowClick ? "cursor-pointer hover:bg-muted/50" : undefined
+                  }
                 >
                   {columns.map((column, cellIndex) => (
                     <TableCell key={cellIndex} className={column.className}>
@@ -236,8 +250,10 @@ export function DataTable<T>({
       {pagination && sortedData.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0 mt-4">
           <div className="text-sm text-muted-foreground">
-            Showing {Math.min((currentPage - 1) * pageSize + 1, sortedData.length)} to{" "}
-            {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} entries
+            Showing{" "}
+            {Math.min((currentPage - 1) * pageSize + 1, sortedData.length)} to{" "}
+            {Math.min(currentPage * pageSize, sortedData.length)} of{" "}
+            {sortedData.length} entries
           </div>
           <div className="flex items-center space-x-6 lg:space-x-8">
             <div className="flex items-center space-x-2">
@@ -273,7 +289,9 @@ export function DataTable<T>({
               </Button>
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium">{currentPage}</span>
-                <span className="text-sm text-muted-foreground">of {totalPages}</span>
+                <span className="text-sm text-muted-foreground">
+                  of {totalPages}
+                </span>
               </div>
               <Button
                 variant="outline"
