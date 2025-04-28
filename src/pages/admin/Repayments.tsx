@@ -28,7 +28,7 @@ import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
 
-const Loans = () => {
+const Repayments = () => {
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
 
@@ -597,4 +597,4 @@ const Loans = () => {
   );
 };
 
-export default Loans;
+export default Repayments;

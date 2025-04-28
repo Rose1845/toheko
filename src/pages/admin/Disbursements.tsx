@@ -28,7 +28,7 @@ import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
 
-const Loans = () => {
+const Disbursements = () => {
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
 
@@ -596,5 +596,4 @@ const Loans = () => {
     </DashboardLayout>
   );
 };
-
-export default Loans;
+export default Disbursements;
