@@ -80,6 +80,7 @@ export interface LoanApplicationRequest {
   loanAmount: number;
   memberId: number;
   paymentTypeId: number;
+  loanTypeId: number;
   monthlyRepayment: number;
   loanStatus: string;
   dateApplied: string;

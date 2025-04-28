@@ -90,11 +90,13 @@ const Loans = () => {
 
   const getStatusVariant = (status: string) => {
     switch (status.toUpperCase()) {
-      case "APPROVED":
+      case "Approved":
         return "default";
-      case "PENDING":
+      case "Pending":
         return "secondary";
-      case "REJECTED":
+      case "Rejected":
+        return "destructive";
+      case "Closed":
         return "destructive";
       default:
         return "outline";
@@ -340,7 +342,7 @@ const Loans = () => {
                     formData.get("approvedDate")?.toString() || null,
                   paymentTypeId: Number(formData.get("paymentTypeId")),
                   loanStatus:
-                    formData.get("loanStatus")?.toString() || "PENDING",
+                    formData.get("loanStatus")?.toString() || "Pending",
                   loanTypeId: Number(formData.get("loanTypeId")),
                   loanAmount: Number(formData.get("loanAmount")),
                   monthlyRepayment: Number(formData.get("monthlyRepayment")),
@@ -370,19 +372,6 @@ const Loans = () => {
               }}
               className="grid gap-4"
             >
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Member ID
-                </label>
-                <input
-                  type="text"
-                  name="memberId"
-                  defaultValue={editLoan?.memberId || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  required
-                />
-              </div> */}
-
               <div className="mb-4">
                 <label
                   htmlFor="memberId"
@@ -426,6 +415,30 @@ const Loans = () => {
                     Select Payment Type
                   </option>
                   {paymenttypes?.map((pt) => (
+                    <option key={pt.paymentTypeId} value={pt.paymentTypeId}>
+                      {pt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label
+                  htmlFor="paymentTypeId"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Loan Type
+                </label>
+                <select
+                  name="loanTypeId"
+                  id="loanTypeId"
+                  defaultValue={editLoan?.loanTypeId || ""}
+                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                >
+                  <option value="" disabled>
+                    Select Loan Type
+                  </option>
+                  {loanTypes?.map((pt) => (
                     <option key={pt.id} value={pt.id}>
                       {pt.name}
                     </option>
