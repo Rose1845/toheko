@@ -19,7 +19,7 @@ export const loanService = {
     return response.data.content;
   },
   createLoanApplication: async (data): Promise<LoanApplicationRequest>=>{
-    const response = await apiClient.put(`/api/v1/loans/apply`, data);
+    const response = await apiClient.post(`/api/v1/loans/apply`, data);
     return response.data;
   },
 
@@ -27,7 +27,6 @@ export const loanService = {
     const response = await apiClient.get(`/api/v1/loan-types/${id}`);
     return response.data;
   },
-
 
    getLoanMemberById: async (id: number): Promise<Member> => {
       const response = await apiClient.get(`/api/v1/members/${id}`);
