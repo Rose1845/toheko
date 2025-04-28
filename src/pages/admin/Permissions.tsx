@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -34,19 +33,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { DataTable, Column } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Edit, Trash2, Plus, Shield } from 'lucide-react';
+import { Edit, Trash2, Plus, Shield, Loader2 } from 'lucide-react';
 
 // Form schema for permissions
 const permissionFormSchema = z.object({
@@ -65,7 +57,7 @@ const Permissions = () => {
   const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
 
   // Query permissions
-  const { data: permissions, isLoading } = useQuery({
+  const { data: permissions = [], isLoading, isError } = useQuery({
     queryKey: ['permissions'],
     queryFn: permissionService.getAllPermissions,
   });
@@ -148,34 +140,102 @@ const Permissions = () => {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this permission?')) {
+    if (confirm("Are you sure you want to delete this permission?")) {
       deleteMutation.mutate(id);
     }
   };
 
   const onSubmitAdd = (values: PermissionFormValues) => {
-    const permissionDto: PermissionDTO = {
+    const newPermission: PermissionDTO = {
       name: values.name,
       description: values.description,
       status: values.status
     };
-    createMutation.mutate(permissionDto);
+    createMutation.mutate(newPermission);
   };
 
   const onSubmitEdit = (values: PermissionFormValues) => {
     if (!selectedPermission) return;
-    
-    const permissionDto: PermissionDTO = {
+
+    const updatedPermission: PermissionDTO = {
       name: values.name,
       description: values.description,
       status: values.status
     };
-    
+
     updateMutation.mutate({
       id: selectedPermission.id,
-      permission: permissionDto
+      permission: updatedPermission
     });
   };
+
+  // Define columns for DataTable
+  const columns: Column<Permission>[] = [
+    {
+      header: "ID",
+      accessorKey: "id",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "name",
+      sortable: true,
+      cell: (permission) => (
+        <span className="font-medium">{permission.name}</span>
+      ),
+    },
+    {
+      header: "Description",
+      accessorKey: "description",
+      sortable: true,
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (permission) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            permission.status === "ACTIVE"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {permission.status}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (permission) => (
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(permission);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(permission.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <DashboardLayout>
@@ -185,141 +245,37 @@ const Permissions = () => {
             <div>
               <CardTitle>Permissions Management</CardTitle>
               <CardDescription>
-                Manage system permissions and access control
+                Manage system permissions for users and roles
               </CardDescription>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Permission
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Permission</DialogTitle>
-                  <DialogDescription>
-                    Create a new system permission.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...addForm}>
-                  <form
-                    onSubmit={addForm.handleSubmit(onSubmitAdd)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={addForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Permission Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter permission name"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              placeholder="Describe what this permission allows"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="ACTIVE">Active</SelectItem>
-                              <SelectItem value="INACTIVE">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter>
-                      <Button type="submit" disabled={createMutation.isPending}>
-                        {createMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Permission
+            </Button>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <p>Loading permissions data...</p>
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading permissions...</span>
               </div>
-            ) : permissions && permissions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {permissions.map((permission) => (
-                    <TableRow key={permission.id}>
-                      <TableCell>{permission.id}</TableCell>
-                      <TableCell className="font-medium">
-                        {permission.name}
-                      </TableCell>
-                      <TableCell>{permission.description}</TableCell>
-                      <TableCell>{permission.status}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(permission)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => handleDelete(permission.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            ) : isError ? (
+              <div className="text-center py-8 text-red-500">
+                Error loading permissions. Please try again.
+              </div>
+            ) : permissions.length > 0 ? (
+              <DataTable
+                data={permissions}
+                columns={columns}
+                keyField="id"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No permissions found"
+                loading={isLoading}
+                onRowClick={handleEdit}
+              />
             ) : (
               <div className="text-center py-10">
                 <Shield className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -334,6 +290,88 @@ const Permissions = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Permission</DialogTitle>
+            <DialogDescription>Create a new system permission.</DialogDescription>
+          </DialogHeader>
+          <Form {...addForm}>
+            <form
+              onSubmit={addForm.handleSubmit(onSubmitAdd)}
+              className="space-y-4"
+            >
+              <FormField
+                control={addForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Permission Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter permission name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Describe what this permission allows"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">Active</SelectItem>
+                        <SelectItem value="INACTIVE">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -402,7 +440,14 @@ const Permissions = () => {
               />
               <DialogFooter>
                 <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? "Updating..." : "Update"}
+                  {updateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
