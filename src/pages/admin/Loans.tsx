@@ -21,6 +21,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -29,10 +30,12 @@ import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
 import { Column, DataTable } from "@/components/ui/data-table";
 import { Loader2, PiggyBank } from "lucide-react";
+import ApproveAndGenerateRepayment from "./ApproveAndGenerateRepayment";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
+  const [open, setOpen] = useState(false);
 
   const [loans, setLoans] = useState<LoanApplication[]>([]);
   const [loanTypes, setLoanTypes] = useState<LoanType[]>([]);
@@ -252,15 +255,6 @@ const Loans = () => {
           >
             Edit
           </Button>
-          {loan.loanStatus === "Pending" && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => handleApproveLoan(loan.loanApplicationId)}
-            >
-              Approve
-            </Button>
-          )}
 
           {loan.loanStatus === "Pending" && (
             <Button
@@ -270,6 +264,22 @@ const Loans = () => {
             >
               Generate Repayment Schedule
             </Button>
+          )}
+
+          {loan.loanStatus === "Pending" && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  Approve
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Loan Approval</DialogTitle>
+                </DialogHeader>
+                <ApproveAndGenerateRepayment loan={loan} approverId={1} />
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       ),
