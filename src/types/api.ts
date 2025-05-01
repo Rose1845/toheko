@@ -122,25 +122,45 @@ export interface AccountSuspensionRequest {
   suspendedUntil?: string;
 }
 
+// export interface AccountType {
+//   id: number;
+//   name: string;
+//   description: string;
+//   interestRate: number;
+//   minimumBalance: number;
+//   monthlyFee: number;
+//   status: string;
+// }
+
+// export interface AccountTypeDTO {
+//   name: string;
+//   description: string;
+//   interestRate: number;
+//   minimumBalance: number;
+//   monthlyFee: number;
+//   status: string;
+// }
+
+// types/api.ts (update the existing AccountTypeDTO definition)
 export interface AccountType {
-  id: number;
+  id: number; // Maps to accountTypeId
   name: string;
   description: string;
-  interestRate: number;
-  minimumBalance: number;
-  monthlyFee: number;
-  status: string;
+  shortDescription: string | null;
+  activationFee: number;
+  createDate?: string;
+  lastModified?: string | null;
+  createdBy?: number | null;
+  lastModifiedBy?: number | null;
+  version?: number;
 }
 
 export interface AccountTypeDTO {
   name: string;
   description: string;
-  interestRate: number;
-  minimumBalance: number;
-  monthlyFee: number;
-  status: string;
+  shortDescription: string;
+  activationFee: number; // Add this field
 }
-
 // Payment types
 export interface Payment {
   id: number;
