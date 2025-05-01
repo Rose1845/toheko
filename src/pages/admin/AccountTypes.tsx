@@ -1,4 +1,4 @@
-
+// pages/admin/AccountTypes.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -43,10 +42,8 @@ const AccountTypes = () => {
   const [formData, setFormData] = useState<AccountTypeDTO>({
     name: "",
     description: "",
-    interestRate: 0,
-    minimumBalance: 0,
-    monthlyFee: 0,
-    status: "ACTIVE",
+    shortDescription: "",
+    activationFee: 0, // Add this field
   });
 
   const { data: accountTypes, isLoading, error } = useQuery({
@@ -65,10 +62,10 @@ const AccountTypes = () => {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create account type",
+        description: error.response?.data?.message || "Failed to create account type",
         variant: "destructive",
       });
     },
@@ -86,10 +83,10 @@ const AccountTypes = () => {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update account type",
+        description: error.response?.data?.message || "Failed to update account type",
         variant: "destructive",
       });
     },
@@ -104,10 +101,10 @@ const AccountTypes = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["accountTypes"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to delete account type",
+        description: error.response?.data?.message || "Failed to delete account type",
         variant: "destructive",
       });
     },
@@ -116,12 +113,11 @@ const AccountTypes = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let processedValue: string | number = value;
-    
-    // Convert numeric fields to numbers
-    if (["interestRate", "minimumBalance", "monthlyFee"].includes(name)) {
-      processedValue = parseFloat(value) || 0;
+
+    if (name === "activationFee") {
+      processedValue = parseFloat(value) || 0; // Convert to number for activationFee
     }
-    
+
     setFormData({
       ...formData,
       [name]: processedValue,
@@ -142,10 +138,8 @@ const AccountTypes = () => {
     setFormData({
       name: accountType.name,
       description: accountType.description,
-      interestRate: accountType.interestRate,
-      minimumBalance: accountType.minimumBalance,
-      monthlyFee: accountType.monthlyFee,
-      status: accountType.status,
+      shortDescription: accountType.shortDescription || "",
+      activationFee: accountType.activationFee || 0, // Add this field
     });
     setIsEditMode(true);
     setIsOpen(true);
@@ -161,10 +155,8 @@ const AccountTypes = () => {
     setFormData({
       name: "",
       description: "",
-      interestRate: 0,
-      minimumBalance: 0,
-      monthlyFee: 0,
-      status: "ACTIVE",
+      shortDescription: "",
+      activationFee: 0, // Add this field
     });
     setCurrentAccountType(null);
     setIsEditMode(false);
@@ -175,7 +167,7 @@ const AccountTypes = () => {
   }
 
   if (error) {
-    return <DashboardLayout>Error loading account types</DashboardLayout>;
+    return <DashboardLayout>Error loading account types: {(error as Error).message}</DashboardLayout>;
   }
 
   return (
@@ -236,45 +228,27 @@ const AccountTypes = () => {
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="interestRate" className="text-right">
-                        Interest Rate (%)
+                      <Label htmlFor="shortDescription" className="text-right">
+                        Short Description
                       </Label>
                       <Input
-                        id="interestRate"
-                        name="interestRate"
-                        type="number"
-                        step="0.01"
-                        value={formData.interestRate}
+                        id="shortDescription"
+                        name="shortDescription"
+                        value={formData.shortDescription}
                         onChange={handleInputChange}
                         className="col-span-3"
-                        required
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="minimumBalance" className="text-right">
-                        Minimum Balance
+                      <Label htmlFor="activationFee" className="text-right">
+                        Activation Fee
                       </Label>
                       <Input
-                        id="minimumBalance"
-                        name="minimumBalance"
+                        id="activationFee"
+                        name="activationFee"
                         type="number"
                         step="0.01"
-                        value={formData.minimumBalance}
-                        onChange={handleInputChange}
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="monthlyFee" className="text-right">
-                        Monthly Fee
-                      </Label>
-                      <Input
-                        id="monthlyFee"
-                        name="monthlyFee"
-                        type="number"
-                        step="0.01"
-                        value={formData.monthlyFee}
+                        value={formData.activationFee}
                         onChange={handleInputChange}
                         className="col-span-3"
                         required
@@ -296,10 +270,8 @@ const AccountTypes = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Interest Rate</TableHead>
-                  <TableHead>Min. Balance</TableHead>
-                  <TableHead>Monthly Fee</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Short Description</TableHead>
+                  <TableHead>Activation Fee</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -307,16 +279,10 @@ const AccountTypes = () => {
                 {accountTypes && accountTypes.length > 0 ? (
                   accountTypes.map((accountType) => (
                     <TableRow key={accountType.id}>
-                      <TableCell className="font-medium">{accountType.name}</TableCell>
-                      <TableCell>{accountType.description}</TableCell>
-                      <TableCell>{accountType.interestRate}%</TableCell>
-                      <TableCell>${accountType.minimumBalance}</TableCell>
-                      <TableCell>${accountType.monthlyFee}</TableCell>
-                      <TableCell>
-                        <Badge variant={accountType.status === "ACTIVE" ? "default" : "destructive"}>
-                          {accountType.status}
-                        </Badge>
-                      </TableCell>
+                      <TableCell className="font-medium">{accountType.name || "N/A"}</TableCell>
+                      <TableCell>{accountType.description || "N/A"}</TableCell>
+                      <TableCell>{accountType.shortDescription || "N/A"}</TableCell>
+                      <TableCell>${(accountType.activationFee ?? 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm" onClick={() => handleEdit(accountType)}>
@@ -335,7 +301,7 @@ const AccountTypes = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={5} className="text-center">
                       No account types found
                     </TableCell>
                   </TableRow>
