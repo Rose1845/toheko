@@ -197,13 +197,13 @@ export default function DashboardSidebar() {
             )}
           </div>
           <SidebarLink
-            to="/admin/members"
+            to="/admin/member-management"
             icon={<Users className="h-5 w-5" />}
             label="Members"
-            active={isActive("/admin/members")}
+            active={isActive("/admin/member-management")}
             collapsed={collapsed}
           />
-          <SidebarLink
+          {/* <SidebarLink
             to="/admin/next-of-kin"
             icon={<UserPlus className="h-5 w-5" />}
             label="Next of Kin"
@@ -216,7 +216,7 @@ export default function DashboardSidebar() {
             label="Board Members"
             active={isActive("/admin/board-members")}
             collapsed={collapsed}
-          />
+          /> */}
 
           <div className="pt-4 pb-2">
             {!collapsed && (
