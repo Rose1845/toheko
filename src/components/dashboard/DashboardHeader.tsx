@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { jwtDecode } from "jwt-decode";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bell, Settings, User, LogOut, HelpCircle, Home } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 import {
   DropdownMenu,
@@ -12,12 +15,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { decode } from "punycode";
-// define types
+
+// Define a custom interface for our JWT payload
+interface TohekoJwtPayload {
+  sub: string;
+  role: string;
+  [key: string]: any; // Allow for other properties that might be in the token
+}
 
 const DashboardHeader: React.FC = () => {
   const token = localStorage.getItem("token");
-  const decoded = jwtDecode(token);
+  const decoded = token ? jwtDecode<TohekoJwtPayload>(token) : { sub: "Admin User", role: "Administrator" };
+  const [notificationCount, setNotificationCount] = useState(3);
+  
+  // Get user initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase();
+  };
+
+  const userInitials = getInitials(decoded.sub || "Admin User");
+
   return (
     <header className="w-full bg-white border-b border-gray-200">
       <div className="h-16 px-4 flex items-center justify-between">
@@ -29,52 +50,104 @@ const DashboardHeader: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-gray-400"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-            </svg>
-            <span className="absolute top-0 right-0 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-          </div>
+          {/* Notifications Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5 text-gray-500" />
+                {notificationCount > 0 && (
+                  <Badge 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white"
+                  >
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80" align="end">
+              <DropdownMenuLabel className="flex justify-between items-center">
+                <span>Notifications</span>
+                <Link to="/admin/notifications" className="text-xs text-primary hover:underline">
+                  View All
+                </Link>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="max-h-80 overflow-y-auto">
+                <DropdownMenuItem className="py-3 cursor-default">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between">
+                      <span className="font-medium">New Loan Application</span>
+                      <span className="text-xs text-muted-foreground">2 min ago</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">John Doe has submitted a new loan application.</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="py-3 cursor-default">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between">
+                      <span className="font-medium">System Update</span>
+                      <span className="text-xs text-muted-foreground">1 hour ago</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">The system has been updated to version 2.3.0.</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="py-3 cursor-default">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between">
+                      <span className="font-medium">New Member</span>
+                      <span className="text-xs text-muted-foreground">3 hours ago</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Jane Smith has joined the SACCO.</p>
+                  </div>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
+          {/* User Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-medium">
-                  A
-                </div>
+                <Avatar>
+                  <AvatarImage src="/placeholder-avatar.jpg" alt={decoded.sub} />
+                  <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {" "}
                     {decoded.sub}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {/* admin@mahissasacco.com */}
-                    {decoded?.role}
+                    {decoded.role}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <Link to="/" className="w-full">
-                  Back to Website
-                </Link>
+                <User className="mr-2 h-4 w-4" />
+                <Link to="/admin/profile" className="w-full">Profile</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Link to="/" className="w-full">
-                  Log out
-                </Link>
+                <Settings className="mr-2 h-4 w-4" />
+                <Link to="/admin/settings" className="w-full">Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <HelpCircle className="mr-2 h-4 w-4" />
+                <span>Support</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Home className="mr-2 h-4 w-4" />
+                <Link to="/" className="w-full">Back to Website</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <LogOut className="mr-2 h-4 w-4" />
+                <Link to="/" className="w-full">Log out</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
