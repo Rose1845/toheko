@@ -310,7 +310,7 @@ const BoardMembers = () => {
   ];
 
   return (
-    <DashboardLayout>
+    // <DashboardLayout>
       <div className="container mx-auto py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -491,7 +491,7 @@ const BoardMembers = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    // </DashboardLayout>
   );
 };
 

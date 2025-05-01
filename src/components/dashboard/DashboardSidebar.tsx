@@ -79,7 +79,7 @@ const SidebarSubmenu = ({
       </button>
 
       {(isOpen || collapsed) && (
-        <div className={`pl-${collapsed ? "0" : "6"} space-y-1 mt-1`}>
+        <div className={`pl-${collapsed ? "0" : "8"} space-y-1 mt-1`}>
           {children}
         </div>
       )}
@@ -89,7 +89,7 @@ const SidebarSubmenu = ({
 
 export default function DashboardSidebar() {
   const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path) => location.pathname === path;
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -106,13 +106,9 @@ export default function DashboardSidebar() {
       }
     };
 
-    // Initial check
     handleResize();
-
-    // Add event listener
     window.addEventListener("resize", handleResize);
 
-    // Cleanup
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -123,7 +119,6 @@ export default function DashboardSidebar() {
       isMobile,
       isOpen: sidebarOpen,
     };
-
     // Create and dispatch a custom event with the sidebar state
     const event = new CustomEvent("sidebarStateChange", {
       detail: sidebarState,
@@ -141,7 +136,6 @@ export default function DashboardSidebar() {
 
   return (
     <>
-      {/* Mobile menu button - only visible on small screens */}
       <button
         onClick={toggleSidebar}
         className="fixed top-4 left-4 z-30 md:hidden bg-background p-2 rounded-md border shadow-sm"
@@ -167,7 +161,6 @@ export default function DashboardSidebar() {
           )}
           {collapsed && <PiggyBank className="h-6 w-6 mx-auto" />}
 
-          {/* Collapse button - only visible on desktop */}
           <button
             onClick={toggleCollapse}
             className="hidden md:block text-muted-foreground hover:text-foreground"
@@ -204,13 +197,13 @@ export default function DashboardSidebar() {
             )}
           </div>
           <SidebarLink
-            to="/admin/members"
+            to="/admin/member-management"
             icon={<Users className="h-5 w-5" />}
             label="Members"
-            active={isActive("/admin/members")}
+            active={isActive("/admin/member-management")}
             collapsed={collapsed}
           />
-          <SidebarLink
+          {/* <SidebarLink
             to="/admin/next-of-kin"
             icon={<UserPlus className="h-5 w-5" />}
             label="Next of Kin"
@@ -223,7 +216,7 @@ export default function DashboardSidebar() {
             label="Board Members"
             active={isActive("/admin/board-members")}
             collapsed={collapsed}
-          />
+          /> */}
 
           <div className="pt-4 pb-2">
             {!collapsed && (
@@ -232,7 +225,6 @@ export default function DashboardSidebar() {
               </p>
             )}
           </div>
-          {/* <SidebarLink to="/admin/loans" icon={<CreditCard className="h-5 w-5" />} label="Loans" active={isActive("/admin/loans")} collapsed={collapsed} /> */}
           <SidebarSubmenu
             icon={<CreditCard className="h-5 w-5" />}
             label="Loans"
@@ -290,7 +282,6 @@ export default function DashboardSidebar() {
             collapsed={collapsed}
           />
 
-          {/* Payments Submenu */}
           <SidebarSubmenu
             icon={<Receipt className="h-5 w-5" />}
             label="Payments"
@@ -353,7 +344,6 @@ export default function DashboardSidebar() {
         </div>
       </div>
 
-      {/* Overlay for mobile - closes sidebar when clicking outside */}
       {sidebarOpen && isMobile && (
         <div
           className="fixed inset-0 z-10 bg-black/50 md:hidden"

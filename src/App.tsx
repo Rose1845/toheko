@@ -15,6 +15,9 @@ import Payments from "./pages/admin/Payments";
 import PaymentTypes from "./pages/admin/PaymentTypes";
 import PaymentModes from "./pages/admin/PaymentModes";
 import NextOfKinManagement from "./pages/admin/NextOfKinManagement";
+import MemberManagement from "./pages/admin/MemberManagement";
+import Settings from "./pages/admin/Settings";
+import Notifications from "./pages/admin/Notifications";
 import NotFound from "./pages/NotFound";
 import Permissions from "./pages/admin/Permissions";
 import BoardMembers from "./pages/admin/BoardMembers";
@@ -38,6 +41,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/members" element={<Members />} />
+          <Route path="/admin/member-management" element={<MemberManagement />} />
           <Route path="/admin/loans" element={<Loans />} />
           <Route path="/admin/loan-schedules" element={<RepaymentSchedule />} />
           <Route path="/admin/loan-repayments" element={<Repayments />} />
@@ -52,6 +56,8 @@ const App = () => (
           <Route path="/admin/board-members" element={<BoardMembers />} />
           <Route path="/admin/savings" element={<Savings />} />
           <Route path="/admin/roles" element={<Roles />} />
+          <Route path="/admin/settings" element={<Settings />} />
+          <Route path="/admin/notifications" element={<Notifications />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
