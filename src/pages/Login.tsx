@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,12 +23,21 @@ const loginSchema = z.object({
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Check for session expiration query parameter and show message
+  useEffect(() => {
+    const sessionExpired = searchParams.get("sessionExpired");
+    if (sessionExpired === "true") {
+      toast.error("Your session has expired. Please log in again.");
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;

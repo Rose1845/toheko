@@ -32,26 +32,28 @@ const MemberManagement = () => {
             <Tabs
               defaultValue="members"
               value={activeTab}
-              onValueChange={(value: "members" | "boardMembers" | "nextOfKin") => setActiveTab(value)}
+              onValueChange={(value: "members" |  "nextOfKin"| "boardMembers" ) => setActiveTab(value)}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="members">Members</TabsTrigger>
-                <TabsTrigger value="boardMembers">Board Members</TabsTrigger>
                 <TabsTrigger value="nextOfKin">Next of Kin</TabsTrigger>
+                <TabsTrigger value="boardMembers">Board Members</TabsTrigger>            
               </TabsList>
               
               <TabsContent value="members" className="mt-4">
                 <Members isTabbed={true} />
               </TabsContent>
               
-              <TabsContent value="boardMembers" className="mt-4">
-                <BoardMembers isTabbed={true} />
-              </TabsContent>
               
               <TabsContent value="nextOfKin" className="mt-4">
                 <NextOfKinManagement isTabbed={true} />
               </TabsContent>
+
+              <TabsContent value="boardMembers" className="mt-4">
+                <BoardMembers isTabbed={true} />
+              </TabsContent>
+              
             </Tabs>
           </CardContent>
         </Card>
