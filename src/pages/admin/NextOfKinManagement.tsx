@@ -74,6 +74,7 @@ const NextOfKinManagement = () => {
     queryKey: ["nextOfKins"],
     queryFn: nextOfKinService.getAllNextOfKins,
   });
+  console.log({ nextOfKins });
 
   const createMutation = useMutation({
     mutationFn: nextOfKinService.createNextOfKin,
@@ -213,7 +214,7 @@ const NextOfKinManagement = () => {
   };
 
   return (
-    <DashboardLayout>
+    // <DashboardLayout>/
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Next of Kin Management</h1>
@@ -227,7 +228,6 @@ const NextOfKinManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Member ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Relationship</TableHead>
@@ -240,8 +240,7 @@ const NextOfKinManagement = () => {
                 {nextOfKins.length > 0 ? (
                   nextOfKins.map((kin) => (
                     <TableRow key={kin.nextOfKinId}>
-                      <TableCell>{kin.nextOfKinId}</TableCell>
-                      <TableCell>{kin.memberId}</TableCell>
+                      <TableCell>{`${kin?.member?.firstName} ${kin?.member.lastName}`}</TableCell>
                       <TableCell>{`${kin.firstName} ${kin.lastName}`}</TableCell>
                       <TableCell>{kin.relationship}</TableCell>
                       <TableCell>{kin.phoneNumber}</TableCell>
@@ -439,7 +438,7 @@ const NextOfKinManagement = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    // </DashboardLayout>
   );
 };
 

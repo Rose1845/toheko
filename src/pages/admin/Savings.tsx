@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { savingService } from "@/services/savingService";
 import { memberService } from "@/services/memberService";
 import { Saving, SavingRequest } from "@/types/api";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 import {
   Dialog,
@@ -35,14 +36,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, PiggyBank } from "lucide-react";
 
 // Form schema for savings
 const savingFormSchema = z.object({
@@ -206,28 +199,119 @@ const Savings = () => {
     }
   };
 
-  // Handle loading state
-  if (savingsLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-64">
-          <p>Loading savings data...</p>
+  // Define columns for DataTable
+  const columns: Column<Saving>[] = [
+    {
+      header: "ID",
+      accessorKey: "id",
+      sortable: true,
+    },
+    {
+      header: "Member",
+      accessorKey: "memberId",
+      sortable: true,
+      cell: (saving) => {
+        const member = members?.find((m) => m.memberId === saving.memberId);
+        return (
+          <span className="font-medium">
+            {member
+              ? `${member.firstName} ${member.lastName}`
+              : `Member #${saving.memberId}`}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Amount",
+      accessorKey: "savingAmount",
+      sortable: true,
+      cell: (saving) => (
+        <span className="font-medium">
+          {new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "KES",
+          }).format(saving?.savingAmount)}
+        </span>
+      ),
+    },
+    {
+      header: "Date",
+      accessorKey: "savingDate",
+      sortable: true,
+      cell: (saving) => (
+        <span>{new Date(saving?.savingDate).toLocaleDateString()}</span>
+      ),
+    },
+    {
+      header: "Method",
+      accessorKey: "savingMethod",
+      sortable: true,
+      cell: (saving) => (
+        <span className="capitalize">
+          {" "}
+          {saving?.savingMethod ? saving.savingMethod.toLowerCase() : "N/A"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (saving) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            saving.status === "ACTIVE"
+              ? "bg-green-100 text-green-800"
+              : saving.status === "COMPLETED"
+              ? "bg-blue-100 text-blue-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {saving?.status}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (saving) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(saving);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(saving.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
         </div>
-      </DashboardLayout>
-    );
-  }
+      ),
+    },
+  ];
 
   return (
     <DashboardLayout>
       <div className="container mx-auto py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Savings Management</CardTitle>
-              <CardDescription>
-                Manage member savings and contributions
-              </CardDescription>
-            </div>
+            <CardTitle>Savings Management</CardTitle>
+            <CardDescription>
+              Manage member savings and contributions
+            </CardDescription>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="default">
@@ -370,54 +454,40 @@ const Savings = () => {
             </Dialog>
           </CardHeader>
           <CardContent>
-            {savings && savings.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Member ID</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {savings.map((saving) => (
-                    <TableRow key={saving.id}>
-                      <TableCell>{saving.id}</TableCell>
-                      <TableCell>{saving.memberId}</TableCell>
-                      <TableCell>{saving.savingAmount}</TableCell>
-                      <TableCell>
-                        {new Date(saving.savingDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{saving.savingMethod}</TableCell>
-                      <TableCell>{saving.status}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(saving)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => handleDelete(saving.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            {savingsLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading savings...</span>
+              </div>
+            ) : savings?.length === 0 ? (
+              <div className="text-center py-10">
+                <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No savings found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by creating a new saving record.
+                </p>
+                <Button
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="mt-4"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Saving
+                </Button>
+              </div>
             ) : (
-              <p className="text-center py-4">No savings records found</p>
+              <DataTable
+                data={savings}
+                columns={columns}
+                keyField="id"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No savings found"
+                loading={savingsLoading}
+                onRowClick={(saving) => handleEdit(saving)}
+              />
             )}
           </CardContent>
         </Card>

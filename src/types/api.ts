@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Base response types
 export interface AcknowledgementResponse {
   success: boolean;
   message: string;
@@ -12,7 +11,6 @@ export interface AcknowledgementResponseObject {
   object?: any;
 }
 
-// Authentication types
 export interface AuthenticationRequest {
   username: string;
   password: string;
@@ -37,7 +35,6 @@ export interface AuthenticationResponse {
   roles: string[];
 }
 
-// Member types
 export interface MemberRequest {
   memberId: number;
   firstName: string;
@@ -61,7 +58,6 @@ export interface SuspensionRequest {
   suspendedUntil?: string;
 }
 
-// Loan types
 export interface LoanType {
   id: number;
   name: string;
@@ -84,8 +80,9 @@ export interface LoanApplicationRequest {
   loanAmount: number;
   memberId: number;
   paymentTypeId: number;
+  loanTypeId: number;
   monthlyRepayment: number;
-  loanStatus: "Pending" | "Approved" | "Rejected"; // if possible, use a union type
+  loanStatus: string;
   dateApplied: string;
   approvedDate: string | null;
   remarks: string;
@@ -105,7 +102,6 @@ export interface LoanApprovalRequest {
   comments?: string;
 }
 
-// Account types
 export interface Account {
   id: number;
   accountNumber: string;
@@ -126,36 +122,56 @@ export interface AccountSuspensionRequest {
   suspendedUntil?: string;
 }
 
-// Account Type definitions
+// export interface AccountType {
+//   id: number;
+//   name: string;
+//   description: string;
+//   interestRate: number;
+//   minimumBalance: number;
+//   monthlyFee: number;
+//   status: string;
+// }
+
+// export interface AccountTypeDTO {
+//   name: string;
+//   description: string;
+//   interestRate: number;
+//   minimumBalance: number;
+//   monthlyFee: number;
+//   status: string;
+// }
+
+// types/api.ts (update the existing AccountTypeDTO definition)
 export interface AccountType {
-  id: number;
+  id: number; // Maps to accountTypeId
   name: string;
   description: string;
-  interestRate: number;
-  minimumBalance: number;
-  monthlyFee: number;
-  status: string;
+  shortDescription: string | null;
+  activationFee: number;
+  createDate?: string;
+  lastModified?: string | null;
+  createdBy?: number | null;
+  lastModifiedBy?: number | null;
+  version?: number;
 }
 
 export interface AccountTypeDTO {
   name: string;
   description: string;
-  interestRate: number;
-  minimumBalance: number;
-  monthlyFee: number;
-  status: string;
+  shortDescription: string;
+  activationFee: number; // Add this field
 }
-
 // Payment types
 export interface Payment {
   id: number;
   memberId: number;
   amount: number;
+  accountId: Account;
   paymentDate: string;
-  paymentTypeId: number;
+  paymentType: PaymentType;
   modeOfPaymentId: number;
   referenceNumber: string;
-  status: string;
+  phoneNumber: string;
   description?: string;
 }
 
@@ -169,24 +185,26 @@ export interface PaymentUpdateDTO {
 }
 
 export interface PaymentType {
-  id: number;
+  paymentTypeId: number;
   name: string;
-  description: string;
-  status: string;
+  paymentShortDesc: string;
+  paymentDescription: string;
 }
 
 export interface PaymentTypeRequest {
-  id: number;
+  paymentTypeId: number;
   name: string;
-  description: string;
-  status: string;
+  paymentShortDesc: string;
+  paymentDescription: string;
 }
 
 // Mode of Payment
 export interface ModeOfPayment {
-  id: number;
+  id?: number;
+  modeOfPaymentId: number;
   name: string;
   description: string;
+  shortDescription?: string;
   status: string;
 }
 
@@ -200,6 +218,7 @@ export interface ModeOfPaymentDto {
 export interface NextOfKin {
   nextOfKinId: number;
   memberId: number;
+  member: Member;
   firstName: string;
   lastName: string;
   relationship: string;
@@ -273,14 +292,26 @@ export interface SavingRequest {
 
 // Role types
 export interface Role {
-  code: number;
-  name: string;
-  description: string;
-  status: string;
+  roleCode: number;
+  roleName: string;
+  roleShortDesc: string;
+  roleDescription: string;
+  roleStatus: string;
+  createDate?: string;
+  lastModified?: string | null;
+  createdBy?: number | null;
+  lastModifiedBy?: number | null;
+  permissions?: Array<{
+    id: number;
+    permissionName: string;
+    permissionDescription: string;
+  }>;
+  version?: number;
 }
 
 export interface RoleDTO {
-  name: string;
-  description: string;
-  status: string;
+  roleName: string;
+  roleDescription: string;
+  roleStatus: string;
+  permissionIds?: number[];
 }

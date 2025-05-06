@@ -1,5 +1,5 @@
-
 import axios from 'axios';
+import { toast } from "@/components/ui/sonner";
 
 const API_BASE_URL = 'https://sacco-app-production.up.railway.app';
 
@@ -20,6 +20,21 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      toast.error("Session expired. Please log in again.");
+      localStorage.removeItem("token");
+      window.location.href = "/login?sessionExpired=true"; 
+    }
     return Promise.reject(error);
   }
 );

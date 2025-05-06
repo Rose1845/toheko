@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Edit, Trash, Plus, Loader2 } from "lucide-react";
+import { Edit, Trash, Plus, Loader2, Users } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import DashboardLayout from "./DashboardLayout";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Card,
   CardContent,
@@ -13,14 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -107,6 +100,19 @@ const BoardMembers = () => {
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
+
+  const enrichedBoardMembers = useMemo(() => {
+    if (!boardMembers || !members) return [];
+    return boardMembers.map((bm) => {
+      const member = members.find((m) => m.memberId === bm.memberId);
+      return {
+        ...bm,
+        fullName: member
+          ? `${member.firstName} ${member.lastName}`
+          : "Unknown Member",
+      };
+    });
+  }, [boardMembers, members]);
 
   const handleAddNew = () => {
     form.reset({
@@ -203,117 +209,157 @@ const BoardMembers = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "active":
+    switch (status.toUpperCase()) {
+      case "ACTIVE":
         return "bg-green-100 text-green-800";
-      case "inactive":
-        return "bg-gray-100 text-gray-800";
+      case "INACTIVE":
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-blue-100 text-blue-800";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Board Members
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Manage SACCO board members and their positions
-            </p>
-          </div>
-          <Button className="flex items-center gap-2" onClick={handleAddNew}>
-            <Plus className="h-4 w-4" /> Add New
+  // Define columns for DataTable
+  const columns: Column<BoardMember & { fullName?: string }>[] = [
+    {
+      header: "ID",
+      accessorKey: "id",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "fullName",
+      sortable: true,
+      cell: (boardMember) => (
+        <span className="font-medium">{boardMember.fullName}</span>
+      ),
+    },
+    {
+      header: "Position",
+      accessorKey: "position",
+      sortable: true,
+    },
+    {
+      header: "Start Date",
+      accessorKey: "createdAt",
+      sortable: true,
+      cell: (boardMember) => (
+        <span>
+          {boardMember.createdAt
+            ? format(new Date(boardMember.createdAt), "PPP")
+            : "N/A"}
+        </span>
+      ),
+    },
+    {
+      header: "End Date",
+      accessorKey: "endDate",
+      sortable: true,
+      cell: (boardMember) => (
+        <span>
+          {boardMember.endDate
+            ? format(new Date(boardMember.endDate), "PPP")
+            : "Current"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (boardMember) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+            boardMember.status
+          )}`}
+        >
+          {boardMember.status}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (boardMember) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(boardMember);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(boardMember);
+            }}
+          >
+            <Trash className="h-4 w-4 mr-1" />
+            Delete
           </Button>
         </div>
+      ),
+    },
+  ];
 
+  return (
+    // <DashboardLayout>
+      <div className="container mx-auto py-8">
         <Card>
-          <CardHeader>
-            <CardTitle>Board Members Directory</CardTitle>
-            <CardDescription>
-              View and manage all board members and their positions
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Board Members</CardTitle>
+              <CardDescription>
+                Manage the SACCO board members and their positions
+              </CardDescription>
+            </div>
+            <Button onClick={handleAddNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Board Member
+            </Button>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading board members...</span>
               </div>
-            ) : error ? (
-              <div className="text-center py-8 text-red-500">
-                Error loading board members. Please try again.
+            ) : enrichedBoardMembers.length === 0 ? (
+              <div className="text-center py-10">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No board members found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by adding a new board member.
+                </p>
+                <Button
+                  onClick={handleAddNew}
+                  className="mt-4"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Board Member
+                </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Member ID</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      {/* <TableHead>End Date</TableHead> */}
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {boardMembers && boardMembers.length > 0 ? (
-                      boardMembers.map((member) => (
-                        <TableRow key={member.id}>
-                          <TableCell>{member.id}</TableCell>
-                          <TableCell>{member.memberId}</TableCell>
-                          <TableCell className="font-medium">
-                            {member.position}
-                          </TableCell>
-                          {/* <TableCell>
-                            {format(new Date(member.createdAt), "MMM d, yyyy")}
-                          </TableCell> */}
-                          {/* <TableCell>
-                            {member.endDate
-                              ? format(new Date(member.endDate), "MMM d, yyyy")
-                              : "-"}
-                          </TableCell> */}
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={getStatusColor(member.status)}
-                            >
-                              {member.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="flex justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(member)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive/80"
-                              onClick={() => handleDelete(member)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                          No board members found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                data={enrichedBoardMembers}
+                columns={columns}
+                keyField="id"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No board members found"
+                loading={isLoading}
+                onRowClick={(boardMember) => handleEdit(boardMember)}
+              />
             )}
           </CardContent>
         </Card>
@@ -381,35 +427,7 @@ const BoardMembers = () => {
                     </FormItem>
                   )}
                 />
-                {/* <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Leave blank if this is a current position
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                /> */}
+
                 <FormField
                   control={form.control}
                   name="status"
@@ -473,7 +491,7 @@ const BoardMembers = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    // </DashboardLayout>
   );
 };
 

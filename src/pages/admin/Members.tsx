@@ -7,17 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
 import { memberService } from "@/services/memberService";
 import { Member, SuspensionRequest } from "@/types/api";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, User, UserCheck, UserMinus, UserPlus } from "lucide-react";
+import { Edit, User, UserCheck, UserMinus, UserPlus, Loader2, Users } from "lucide-react";
 
 // Form schema for member details - making all fields required to match MemberRequest
 const memberFormSchema = z.object({
@@ -210,100 +203,166 @@ const Members = () => {
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Members Management
-          </h1>
-          <p className="text-gray-500">View and manage all SACCO members</p>
+  // Define columns for DataTable
+  const columns: Column<Member>[] = [
+    {
+      header: "ID",
+      accessorKey: "memberId",
+      sortable: true,
+    },
+    {
+      header: "Member No",
+      accessorKey: "memberNo",
+      sortable: true,
+    },
+    {
+      header: "Name",
+      accessorKey: "firstName",
+      sortable: true,
+      cell: (member) => (
+        <span className="font-medium">
+          {member.firstName} {member.lastName}
+        </span>
+      ),
+    },
+    {
+      header: "Contact",
+      accessorKey: "email",
+      sortable: true,
+      cell: (member) => (
+        <div className="flex flex-col">
+          <span>{member.email}</span>
+          <span className="text-xs text-muted-foreground">{member.phoneNumber}</span>
         </div>
+      ),
+    },
+    {
+      header: "Registration Date",
+      accessorKey: "registrationDate",
+      sortable: true,
+      cell: (member) => (
+        <span>
+          {member.registrationDate 
+            ? new Date(member.registrationDate).toLocaleDateString() 
+            : "N/A"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (member) => (
+        <Badge
+          className={
+            member.status === "ACTIVE"
+              ? "bg-green-100 text-green-800 hover:bg-green-100"
+              : member.status === "SUSPENDED"
+              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
+              : "bg-red-100 text-red-800 hover:bg-red-100"
+          }
+        >
+          {member.status}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "memberId",
+      cell: (member) => (
+        <div className="flex space-x-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditMember(member);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          {member.status === "ACTIVE" ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSuspendMember(member);
+              }}
+            >
+              <UserMinus className="h-4 w-4 mr-1" />
+              Suspend
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReactivateMember(member.memberId);
+              }}
+            >
+              <UserCheck className="h-4 w-4 mr-1" />
+              Reactivate
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>Members List</CardTitle>
+  return (
+    // <DashboardLayout>
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Members</CardTitle>
+              <CardDescription>
+                Manage SACCO members and their accounts
+              </CardDescription>
+            </div>
+            <Button onClick={() => {}}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Member
+            </Button>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <p>Loading members...</p>
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading members...</span>
+              </div>
+            ) : members?.length === 0 ? (
+              <div className="text-center py-10">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No members found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by adding new members to the SACCO.
+                </p>
+                <Button 
+                  onClick={() => {}} 
+                  className="mt-4"
+                  variant="outline"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Member
+                </Button>
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member Number</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members &&
-                    members.map((member) => (
-                      <TableRow key={member.memberId}>
-                        <TableCell>{member.memberNo}</TableCell>
-                        <TableCell>{`${member.firstName} ${member.lastName}`}</TableCell>
-                        <TableCell>{member.email}</TableCell>
-                        <TableCell>{member.phoneNumber}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              member.status === "ACTIVE"
-                                ? "default"
-                                : "destructive"
-                            }
-                          >
-                            {member.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(member)}
-                            >
-                              <User className="h-4 w-4 mr-1" /> View
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditMember(member)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" /> Edit
-                            </Button>
-                            {member.status === "ACTIVE" ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-amber-600"
-                                onClick={() => handleSuspendMember(member)}
-                              >
-                                <UserMinus className="h-4 w-4 mr-1" /> Suspend
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-600"
-                                onClick={() =>
-                                  handleReactivateMember(
-                                    member.memberId! as unknown as number
-                                  )
-                                }
-                              >
-                                <UserCheck className="h-4 w-4 mr-1" />{" "}
-                                Reactivate
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+              <DataTable
+                data={members}
+                columns={columns}
+                keyField="memberId"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No members found"
+                loading={isLoading}
+                onRowClick={(member) => handleViewDetails(member)}
+              />
             )}
           </CardContent>
         </Card>
@@ -402,98 +461,93 @@ const Members = () => {
             <DialogHeader>
               <DialogTitle>Edit Member</DialogTitle>
               <DialogDescription>
-                Update member information using the form below.
+                Update the selected member's information
               </DialogDescription>
             </DialogHeader>
+
             <Form {...memberForm}>
               <form
                 onSubmit={memberForm.handleSubmit(onSubmitEdit)}
-                className="space-y-4"
+                className="grid gap-4 py-4"
               >
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={memberForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={memberForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={memberForm.control}
-                    name="nationalId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>National ID</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="dateOfBirth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date of Birth</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={memberForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={memberForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={memberForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={memberForm.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={memberForm.control}
+                  name="nationalId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>National ID</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={memberForm.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={memberForm.control}
                   name="address"
@@ -507,14 +561,8 @@ const Members = () => {
                     </FormItem>
                   )}
                 />
+
                 <DialogFooter>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setShowEditForm(false)}
-                  >
-                    Cancel
-                  </Button>
                   <Button type="submit">Save Changes</Button>
                 </DialogFooter>
               </form>
@@ -582,7 +630,7 @@ const Members = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    // </DashboardLayout>
   );
 };
 
