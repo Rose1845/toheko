@@ -153,7 +153,7 @@ const Register = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="userFirstname">First name</Label>
+                  <Label htmlFor="userFirstname">First Name</Label>
                   <Input
                     id="userFirstname"
                     placeholder="First name"
@@ -170,7 +170,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="userLastname">Last name</Label>
+                  <Label htmlFor="userLastname">Last Name</Label>
                   <Input
                     id="userLastname"
                     placeholder="Last name"
@@ -188,7 +188,7 @@ const Register = () => {
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="userEmail">Email address</Label>
+                  <Label htmlFor="userEmail">Email Address</Label>
                   <Input
                     id="userEmail"
                     type="userEmail"
@@ -203,7 +203,7 @@ const Register = () => {
                   )}
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="userUsername">Username</Label>
                   <Input
                     id="userUsername"
@@ -219,7 +219,7 @@ const Register = () => {
                       {errors.userUsername}
                     </p>
                   )}
-                </div>
+                </div> */}
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -241,7 +241,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="userPhoneNumber">Phone number</Label>
+                  <Label htmlFor="userPhoneNumber">Phone Number</Label>
                   <Input
                     id="userPhoneNumber"
                     type="tel"
@@ -260,7 +260,7 @@ const Register = () => {
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="userPassword">userPassword</Label>
+                  <Label htmlFor="userPassword">Password</Label>
                   <Input
                     id="userPassword"
                     type="userPassword"
@@ -278,9 +278,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmuserPassword">
-                    Confirm userPassword
-                  </Label>
+                  <Label htmlFor="confirmuserPassword">Confirm Password</Label>
                   <Input
                     id="confirmuserPassword"
                     type="userPassword"
