@@ -123,7 +123,7 @@ const Payments = () => {
 
   const onSubmitPaymentType = async (values: PaymentTypeFormValues) => {
     console.log("Submitting Payment Type:", values);
-    await paymentTypeService.createPaymentType(values);
+    await paymentTypeService.createPaymentTYpe(values);
     toast({ title: "Payment Type Added" });
     setShowAddPaymentTypeDialog(false);
     paymentTypeForm.reset();
