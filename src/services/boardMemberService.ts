@@ -1,17 +1,23 @@
-
 import apiClient from './api';
 import { BoardMember, BoardMemberRequest, AcknowledgementResponse } from '../types/api';
 
 export const boardMemberService = {
-  // Get all board members
-  getAllBoardMembers: async (): Promise<BoardMember[]> => {
-    const response = await apiClient.get('/api/v1/board-members');
+  // Get all board members with optional query parameters
+  getAllBoardMembers: async (params?: {
+    position?: string;
+    status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<BoardMember[]> => {
+    const response = await apiClient.get('/api/v1/board-members', { params });
     return response.data;
   },
   
   // Get a specific board member by ID
   getBoardMemberById: async (id: number): Promise<BoardMember> => {
-    const response = await apiClient.get(`/api/v1/bgetBoardMemberById?boardMemberId=${id}`);
+    const response = await apiClient.get(`/api/v1/getBoardMemberById`, {
+      params: { boardMemberId: id }
+    });
     return response.data;
   },
   
@@ -29,7 +35,9 @@ export const boardMemberService = {
   
   // Delete a board member
   deleteBoardMember: async (id: number): Promise<AcknowledgementResponse> => {
-    const response = await apiClient.delete(`/api/v1/board-members/${id}`);
+    const response = await apiClient.delete(`/api/v1/delete/board-members`, {
+      params: { boardMemberId: id }
+    });
     return response.data;
   }
 };

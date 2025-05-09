@@ -53,7 +53,7 @@ const formSchema = z.object({
   position: z.string().min(2, "Position is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
-  status: z.string().min(1, "Status is required"),
+  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "SUSPENDED"]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -78,7 +78,7 @@ const BoardMembers = () => {
     },
   });
 
-  // Fetch board members
+  // Fetch board members with query parameters
   const {
     data: boardMembers,
     isLoading,
@@ -174,7 +174,7 @@ const BoardMembers = () => {
         id: values.id || 0,
         memberId: values.memberId,
         position: values.position,
-        createdAt: values.startDate || undefined,
+        createdAt: values.startDate,
         endDate: values.endDate || undefined,
         status: values.status,
       };
@@ -214,6 +214,10 @@ const BoardMembers = () => {
         return "bg-green-100 text-green-800";
       case "INACTIVE":
         return "bg-red-100 text-red-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "SUSPENDED":
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -310,188 +314,213 @@ const BoardMembers = () => {
   ];
 
   return (
-    // <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Board Members</CardTitle>
-              <CardDescription>
-                Manage the SACCO board members and their positions
-              </CardDescription>
+    <div className="container mx-auto py-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Board Members</CardTitle>
+            <CardDescription>
+              Manage the SACCO board members and their positions
+            </CardDescription>
+          </div>
+          <Button onClick={handleAddNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Board Member
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Loading board members...</span>
             </div>
-            <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Board Member
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Loading board members...</span>
-              </div>
-            ) : enrichedBoardMembers.length === 0 ? (
-              <div className="text-center py-10">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No board members found</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Get started by adding a new board member.
-                </p>
-                <Button
-                  onClick={handleAddNew}
-                  className="mt-4"
-                  variant="outline"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Board Member
-                </Button>
-              </div>
-            ) : (
-              <DataTable
-                data={enrichedBoardMembers}
-                columns={columns}
-                keyField="id"
-                pagination={true}
-                searchable={true}
-                pageSize={10}
-                pageSizeOptions={[5, 10, 25, 50]}
-                emptyMessage="No board members found"
-                loading={isLoading}
-                onRowClick={(boardMember) => handleEdit(boardMember)}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Add/Edit Form Dialog */}
-        <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing ? "Edit Board Member" : "Add New Board Member"}
-              </DialogTitle>
-              <DialogDescription>
-                {isEditing
-                  ? "Update the board member's information below."
-                  : "Add a new board member by filling in the information below."}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="memberId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Member</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(parseInt(value))
-                        }
-                        defaultValue={field.value.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {members?.map((member) => (
-                            <SelectItem
-                              key={member.memberId}
-                              value={member.memberId.toString()}
-                            >
-                              {member.firstName} {member.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Position</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter position title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="ACTIVE">Active</SelectItem>
-                          <SelectItem value="INACTIVE">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter className="pt-4">
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">{isEditing ? "Update" : "Add"}</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Confirm Delete</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this board member? This action
-                cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-4">
+          ) : enrichedBoardMembers.length === 0 ? (
+            <div className="text-center py-10">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No board members found</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Get started by adding a new board member.
+              </p>
               <Button
+                onClick={handleAddNew}
+                className="mt-4"
                 variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
               >
-                Cancel
+                <Plus className="mr-2 h-4 w-4" />
+                Add Board Member
               </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    // </DashboardLayout>
+            </div>
+          ) : (
+            <DataTable
+              data={enrichedBoardMembers}
+              columns={columns}
+              keyField="id"
+              pagination={true}
+              searchable={true}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 25, 50]}
+              emptyMessage="No board members found"
+              loading={isLoading}
+              onRowClick={(boardMember) => handleEdit(boardMember)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Form Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Board Member" : "Add New Board Member"}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Update the board member's information below."
+                : "Add a new board member by filling in the information below."}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={form.control}
+                name="memberId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Member</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        field.onChange(parseInt(value))
+                      }
+                      defaultValue={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {members?.map((member) => (
+                          <SelectItem
+                            key={member.memberId}
+                            value={member.memberId.toString()}
+                          >
+                            {member.firstName} {member.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter position title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">Active</SelectItem>
+                        <SelectItem value="INACTIVE">Inactive</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="pt-4">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">{isEditing ? "Update" : "Add"}</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this board member? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

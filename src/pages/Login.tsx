@@ -125,7 +125,7 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username">Email Address</Label>
+                <Label htmlFor="username">username address</Label>
                 <Input
                   id="username"
                   type="username"
