@@ -49,6 +49,11 @@ export interface DataTableProps<T> {
   pageSizeOptions?: number[];
   loading?: boolean;
   emptyMessage?: string;
+  onSearchChange?: (searchTerm: string) => void;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  totalRecords?: number;
+
   onRowClick?: (row: T) => void;
 }
 

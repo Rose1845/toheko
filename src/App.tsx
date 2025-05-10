@@ -28,6 +28,8 @@ import RepaymentSchedule from "./pages/admin/RepaymentSchedule";
 import Repayments from "./pages/admin/Repayments";
 import Disbursements from "./pages/admin/Disbursements";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LoanProducts from "./pages/admin/LoanProducts";
+import LoanPenalties from "./pages/admin/LoanPenalties";
 
 const queryClient = new QueryClient();
 
@@ -45,17 +47,32 @@ const App = () => (
           <Route element={<ProtectedRoute />}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/members" element={<Members />} />
-            <Route path="/admin/member-management" element={<MemberManagement />} />
+            <Route
+              path="/admin/member-management"
+              element={<MemberManagement />}
+            />
             <Route path="/admin/loans" element={<Loans />} />
-            <Route path="/admin/loan-schedules" element={<RepaymentSchedule />} />
+            <Route path="/admin/loan-products" element={<LoanProducts />} />
+            <Route path="/admin/loan-penalties" element={<LoanPenalties />} />
+
+            <Route
+              path="/admin/loan-schedules"
+              element={<RepaymentSchedule />}
+            />
             <Route path="/admin/loan-repayments" element={<Repayments />} />
-            <Route path="/admin/loan-disbursements" element={<Disbursements />} />
+            <Route
+              path="/admin/loan-disbursements"
+              element={<Disbursements />}
+            />
             <Route path="/admin/accounts" element={<Accounts />} />
             <Route path="/admin/account-types" element={<AccountTypes />} />
             <Route path="/admin/payments" element={<Payments />} />
             <Route path="/admin/payment-types" element={<PaymentTypes />} />
             <Route path="/admin/payment-modes" element={<PaymentModes />} />
-            <Route path="/admin/next-of-kin" element={<NextOfKinManagement />} />
+            <Route
+              path="/admin/next-of-kin"
+              element={<NextOfKinManagement />}
+            />
             <Route path="/admin/permissions" element={<Permissions />} />
             <Route path="/admin/board-members" element={<BoardMembers />} />
             <Route path="/admin/savings" element={<Savings />} />
