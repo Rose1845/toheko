@@ -43,7 +43,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { BoardMember, BoardMemberRequest, LoanPenalty } from "@/types/api";
+import {
+  BoardMember,
+  BoardMemberRequest,
+  LoanCollateralItem,
+  LoanPenalty,
+} from "@/types/api";
 import { boardMemberService } from "@/services/boardMemberService";
 import { memberService } from "@/services/memberService";
 import { loanService } from "@/services/loanService";
@@ -51,41 +56,44 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const formSchema = z.object({
   id: z.number().optional(),
-  penaltyType: z.string().min(1, "penaltyType is required"),
-  isActive: z.boolean(),
-  loanProductId: z.coerce.number().min(0),
-  penaltyValue: z.coerce.number().min(0),
+  type: z.string().min(1, "type is required"),
+  loanApplicationId: z.coerce.number().min(0),
+  estimatedValue: z.coerce.number().min(0),
+  ownerName: z.string(),
+  ownerContact: z.string(),
+  description: z.string(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
-const LoanPenalties = () => {
+const LoanCollateral = () => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<LoanPenalty | null>(
-    null
-  );
+  const [selectedMember, setSelectedMember] =
+    useState<LoanCollateralItem | null>(null);
   const { toast } = useToast();
   const { data: loanTypes } = useQuery({
     queryKey: ["loan-types"],
-    queryFn: loanService.getAllLoanPenalties,
+    queryFn: loanService.getAllLoanCollaterals,
   });
 
   const { data: loanProducts } = useQuery({
-    queryKey: ["loan-products"],
-    queryFn: loanService.getAllLoanTypes,
+    queryKey: ["loan-applications"],
+    queryFn: loanService.getAllLoanApplications,
   });
 
-  console.log("loan product", loanTypes);
+  console.log("loan application", loanTypes);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: 0,
-      loanProductId: 0,
-      penaltyType: "",
-      penaltyValue: 0,
-      isActive: true,
+      loanApplicationId: 0,
+      type: "",
+      estimatedValue: 0,
+      ownerContact: "",
+      ownerName: "",
+      description: "",
     },
   });
 
@@ -96,41 +104,45 @@ const LoanPenalties = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["loanPenalties"],
+    queryKey: ["loancollaterals"],
     queryFn: async () => {
       try {
-        return await loanService.getAllLoanPenalties();
+        return await loanService.getAllLoanCollaterals();
       } catch (error) {
-        console.error("Failed to fetch Loan Productss:", error);
-        return [] as LoanPenalty[];
+        console.error("Failed to fetch Loan Collaterals:", error);
+        return [] as LoanCollateralItem[];
       }
     },
   });
   const handleAddNew = () => {
     form.reset({
       id: undefined,
-      loanProductId: 0,
-      penaltyType: "",
-      penaltyValue: 0,
-      isActive: true,
+      loanApplicationId: 0,
+      type: "",
+      estimatedValue: 0,
+      ownerContact: "",
+      ownerName: "",
+      description: "",
     });
     setIsEditing(false);
     setShowForm(true);
   };
 
-  const handleEdit = (product: LoanPenalty) => {
+  const handleEdit = (product: LoanCollateralItem) => {
     form.reset({
       id: product.id,
-      loanProductId: product.loanProductId,
-      penaltyType: product.penaltyType,
-      penaltyValue: product.penaltyValue,
-      isActive: product.isActive,
+      loanApplicationId: product.loanApplicationId,
+      type: product.type,
+      estimatedValue: product.estimatedValue,
+      description: product.description,
+      ownerContact: product.ownerContact,
+      ownerName: product.ownerName,
     });
     setIsEditing(true);
     setShowForm(true);
   };
 
-  const handleDelete = (product: LoanPenalty) => {
+  const handleDelete = (product: LoanCollateralItem) => {
     setSelectedMember(product);
     setShowDeleteDialog(true);
   };
@@ -139,7 +151,7 @@ const LoanPenalties = () => {
     if (!selectedMember) return;
 
     try {
-      await loanService.deleteLoanType(selectedMember.id);
+      await loanService.deleteLoanCollateral(selectedMember.id);
       toast({
         title: "Success",
         description: "Loan Products deleted successfully",
@@ -160,25 +172,27 @@ const LoanPenalties = () => {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const LoanPenaltyData: LoanPenalty = {
+      const LoanPenaltyData: LoanCollateralItem = {
         id: values.id || 0,
-        loanProductId: values.loanProductId,
-        penaltyType: values.penaltyType,
-        penaltyValue: values.penaltyValue,
-        isActive: values.isActive,
+        loanApplicationId: values.loanApplicationId,
+        type: values.type,
+        estimatedValue: values.estimatedValue,
+        description: values.description,
+        ownerContact: values.ownerContact,
+        ownerName: values.ownerName,
       };
 
       if (isEditing) {
-        await loanService.updateLoanPenalty(LoanPenaltyData);
+        await loanService.updateLoanCollateral(LoanPenaltyData);
         toast({
           title: "Success",
-          description: "Loan Products updated successfully",
+          description: "Loan Collateral updated successfully",
         });
       } else {
-        await loanService.createLoanPenanlty(LoanPenaltyData);
+        await loanService.createLoanCollateral(LoanPenaltyData);
         toast({
           title: "Success",
-          description: "Loan Products added successfully",
+          description: "Loan Collateral added successfully",
         });
       }
 
@@ -186,12 +200,12 @@ const LoanPenalties = () => {
       form.reset();
       refetch();
     } catch (error) {
-      console.error("Error saving Loan Products:", error);
+      console.error("Error saving Loan Collateral:", error);
       toast({
         title: "Error",
         description: isEditing
-          ? "Failed to update Loan Products"
-          : "Failed to add Loan Products",
+          ? "Failed to update Loan Collateral"
+          : "Failed to add Loan Collateral",
         variant: "destructive",
       });
     }
@@ -209,33 +223,41 @@ const LoanPenalties = () => {
   };
 
   // Define columns for DataTable
-  const columns: Column<LoanPenalty & { PenaltyType?: string }>[] = [
+  const columns: Column<LoanCollateralItem & { type?: string }>[] = [
     {
       header: "ID",
       accessorKey: "id",
       sortable: true,
     },
     {
-      header: "PenaltyType",
-      accessorKey: "penaltyType",
+      header: "type",
+      accessorKey: "type",
       sortable: true,
       cell: (LoanPenalty) => (
-        <span className="font-medium">{LoanPenalty.penaltyType}</span>
+        <span className="font-medium">{LoanPenalty.type}</span>
       ),
     },
     {
-      header: "PenaltyValue",
-      accessorKey: "penaltyValue",
+      header: "Estmated Value",
+      accessorKey: "estimatedValue",
       sortable: true,
       cell: (LoanPenalty) => (
-        <span className="font-medium">{LoanPenalty.penaltyValue}</span>
+        <span className="font-medium">{LoanPenalty.estimatedValue}</span>
+      ),
+    },
+    {
+      header: "OwnerName",
+      accessorKey: "ownerName",
+      sortable: true,
+      cell: (LoanPenalty) => (
+        <span className="font-medium">{LoanPenalty.ownerName}</span>
       ),
     },
 
     {
-      header: "Active",
-      accessorKey: "isActive",
-      cell: (LoanPenalty) => <span>{LoanPenalty.isActive ? "Yes" : "No"}</span>,
+      header: "ownerContact",
+      accessorKey: "ownerContact",
+      cell: (LoanPenalty) => <span>{LoanPenalty.ownerContact}</span>,
     },
 
     {
@@ -276,28 +298,30 @@ const LoanPenalties = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Loan Penalties</CardTitle>
-              <CardDescription>Manage the SACCO Loan Penalties</CardDescription>
+              <CardTitle>Loan Collaterals</CardTitle>
+              <CardDescription>
+                Manage the SACCO Loan Collaterals
+              </CardDescription>
             </div>
             <Button onClick={handleAddNew}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Loan Penalties
+              Add Loan Collaterals
             </Button>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Loading Loan Penalties...</span>
+                <span className="ml-2">Loading Loan Collaterals...</span>
               </div>
             ) : LoanPenaltys?.length === 0 ? (
               <div className="text-center py-10">
                 <Users className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">
-                  No loan Penalties found
+                  No loan Collaterals found
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Get started by adding a new Loan Penalties
+                  Get started by adding a new Loan Collaterals
                 </p>
                 <Button
                   onClick={handleAddNew}
@@ -305,7 +329,7 @@ const LoanPenalties = () => {
                   variant="outline"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Loan Penalties
+                  Add Loan Collateral
                 </Button>
               </div>
             ) : (
@@ -317,7 +341,7 @@ const LoanPenalties = () => {
                 searchable={true}
                 pageSize={10}
                 pageSizeOptions={[5, 10, 25, 50]}
-                emptyMessage="No Loan Penaltis found"
+                emptyMessage="No Loan Collaterals found"
                 loading={isLoading}
                 onRowClick={(boardMember) => handleEdit(boardMember)}
               />
@@ -325,17 +349,18 @@ const LoanPenalties = () => {
           </CardContent>
         </Card>
 
-        {/* Add/Edit Form Dialog */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogContent className="sm:max-w-[600px] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {isEditing ? "Edit Loan Penalties" : "Add New Loan Penalties"}
+                {isEditing
+                  ? "Edit Loan Collaterals"
+                  : "Add New Loan Collaterals"}
               </DialogTitle>
               <DialogDescription>
                 {isEditing
-                  ? "Update the Loan Penalties's information below."
-                  : "Add a new Loan Penalties by filling in the information below."}
+                  ? "Update the Loan Collaterals's information below."
+                  : "Add a new Loan Collaterals by filling in the information below."}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -350,7 +375,7 @@ const LoanPenalties = () => {
                   <TabsContent value="basic" className="space-y-4 pt-4">
                     <FormField
                       control={form.control}
-                      name="loanProductId"
+                      name="loanApplicationId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Loan Product</FormLabel>
@@ -380,10 +405,10 @@ const LoanPenalties = () => {
 
                     <FormField
                       control={form.control}
-                      name="penaltyType"
+                      name="type"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Penalty Type</FormLabel>
+                          <FormLabel>Type</FormLabel>
                           <FormControl>
                             <Select
                               onValueChange={field.onChange}
@@ -411,12 +436,38 @@ const LoanPenalties = () => {
 
                     <FormField
                       control={form.control}
-                      name="penaltyValue"
+                      name="estimatedValue"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>PenaltyValue</FormLabel>
+                          <FormLabel>EstimatedValue</FormLabel>
                           <FormControl>
                             <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ownerContact"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact</FormLabel>
+                          <FormControl>
+                            <Input type="text" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ownerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>OwnerName</FormLabel>
+                          <FormControl>
+                            <Input type="text" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -446,8 +497,8 @@ const LoanPenalties = () => {
             <DialogHeader>
               <DialogTitle>Confirm Delete</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this Loan Products? This action
-                cannot be undone.
+                Are you sure you want to delete this Loan Collateral? This
+                action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -468,4 +519,4 @@ const LoanPenalties = () => {
   );
 };
 
-export default LoanPenalties;
+export default LoanCollateral;

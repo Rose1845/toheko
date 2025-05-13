@@ -252,6 +252,13 @@ export default function DashboardSidebar() {
               collapsed={collapsed}
             />
             <SidebarLink
+              to="/admin/loan-collaterals"
+              icon={<CreditCard className="h-5 w-5" />}
+              label="Collaterals"
+              active={isActive("/admin/loan-collaterals")}
+              collapsed={collapsed}
+            />
+            <SidebarLink
               to="/admin/loan-repayments"
               icon={<Receipt className="h-5 w-5" />}
               label="Repayments"

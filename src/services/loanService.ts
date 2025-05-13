@@ -39,7 +39,7 @@ export const loanService = {
   },
 
   getAllLoanCollaterals: async (): Promise<LoanCollateralItem[]> => {
-    const response = await apiClient.get('/api/v1/loan-collaterals');
+    const response = await apiClient.get('/api/v1/loan-collaterals?page=0&size=1&sort=');
     console.log({response});
     
     return response.data.content;
@@ -53,10 +53,7 @@ export const loanService = {
     const response = await apiClient.post(`/api/v1/loan-guarantors/create`, data);
     return response.data;
   },
-  createLoanCollateral: async (data): Promise<LoanCollateralItem>=>{
-    const response = await apiClient.post(`/api/v1/loan-collaterals?page=0&size=1&sort=`, data);
-    return response.data;
-  },
+ 
   // updateLoanProduct: async (data): Promise<LoanProduct>=>{
   //   const response = await apiClient.post(`/api/v1/loan-products/update`, data);
   //   return response.data;
@@ -68,7 +65,11 @@ export const loanService = {
 
 
   createLoanPenanlty: async (data): Promise<LoanPenalty>=>{
-    const response = await apiClient.post(`/api/v1/loan-products/create`, data);
+    const response = await apiClient.post(`/api/v1/loan-penalties/create`, data);
+    return response.data;
+  },
+  createLoanCollateral:  async (data): Promise<LoanCollateralItem>=>{
+    const response = await apiClient.post(`/api/v1/loan-collaterals`, data);
     return response.data;
   },
   approveLoan: async (data): Promise<LoanApplicationRequest>=>{
@@ -101,9 +102,14 @@ export const loanService = {
     return response.data;
   },
 
+  deleteLoanCollateral : async (id: number): Promise<AcknowledgementResponseObject> => {
+    const response = await apiClient.delete(`/api/v1/loan-collaterals/${id}`);
+    return response.data;
+  },
+
   // Loan Applications
   getAllLoanApplications: async (): Promise<LoanApplication[]> => {
-    const response = await apiClient.get('/api/v1/loan-applications?page=0&size=1&sort=100000000000');
+    const response = await apiClient.get('/api/v1/loan-applications?page=0&size=10000000&sort=100000000000');
     return response.data.content;
   },
 
@@ -128,6 +134,11 @@ export const loanService = {
 
   updateLoanPenalty: async (application: LoanPenalty): Promise<AcknowledgementResponse> => {
     const response = await apiClient.put('/api/v1/loan-penalties/update', application);
+    return response.data;
+  },
+
+  updateLoanCollateral: async (application: LoanCollateralItem): Promise<AcknowledgementResponse> => {
+    const response = await apiClient.put('/api/v1/loan-collaterals/update', application);
     return response.data;
   },
 

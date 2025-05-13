@@ -30,6 +30,7 @@ import Disbursements from "./pages/admin/Disbursements";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoanProducts from "./pages/admin/LoanProducts";
 import LoanPenalties from "./pages/admin/LoanPenalties";
+import LoanCollateral from "./pages/admin/LoanCollateral";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,10 @@ const App = () => (
             <Route path="/admin/loan-products" element={<LoanProducts />} />
             <Route path="/admin/loan-penalties" element={<LoanPenalties />} />
 
+            <Route
+              path="/admin/loan-collaterals"
+              element={<LoanCollateral />}
+            />
             <Route
               path="/admin/loan-schedules"
               element={<RepaymentSchedule />}
