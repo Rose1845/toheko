@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
 import { loanService } from "@/services/loanService";
-import { LoanApplication, LoanType } from "@/types/api";
+import { LoanApplication, LoanProduct, LoanType } from "@/types/api";
 import {
   Table,
   TableBody,
@@ -21,6 +21,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -29,13 +30,16 @@ import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
 import { Column, DataTable } from "@/components/ui/data-table";
 import { Loader2, PiggyBank } from "lucide-react";
+import ApproveAndGenerateRepayment from "./ApproveAndGenerateRepayment";
+import LoanApplicationForm from "./loans/LoanApplication";
 
 const Disbursements = () => {
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
+  const [open, setOpen] = useState(false);
 
   const [loans, setLoans] = useState<LoanApplication[]>([]);
-  const [loanTypes, setLoanTypes] = useState<LoanType[]>([]);
+  const [loanTypes, setLoanTypes] = useState<LoanProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLoan, setSelectedLoan] = useState<LoanApplication | null>(
     null
@@ -136,11 +140,11 @@ const Disbursements = () => {
 
     try {
       const params = {
-        loanId: loan.loanApplicationId as unknown as string,
-        loanAmount: loan.loanAmount,
+        loanId: loan.id as unknown as string,
+        loanAmount: loan.amount,
         interestRate: Number(12), // Fixed interest rate as 12
-        termInMonths: loan.monthlyRepayment.toString(),
-        startDate: new Date(loan.dateApplied).toISOString().split("T")[0],
+        termInMonths: loan.termDays,
+        startDate: new Date().toISOString().split("T")[0],
         interestMethod: "REDUCING_BALANCE",
       };
 
@@ -189,49 +193,42 @@ const Disbursements = () => {
         );
       },
     },
+    // {
+    //   header: "loanApplicationCode",
+    //   accessorKey: "loanApplicationCode",
+    //   sortable: true,
+    //   cell: (loan) => (
+    //     <span className="font-medium">{loan?.}</span>
+    //   ),
+    // },
     {
-      header: "loanApplicationCode",
-      accessorKey: "loanApplicationCode",
+      header: "termDays",
+      accessorKey: "termDays",
       sortable: true,
-      cell: (loan) => (
-        <span className="font-medium">{loan?.loanApplicationCode}</span>
-      ),
+      cell: (loan) => <span>{loan?.termDays}</span>,
     },
-    {
-      header: "MonthlyRepayment",
-      accessorKey: "monthlyRepayment",
-      sortable: true,
-      cell: (loan) => <span>{loan?.monthlyRepayment}</span>,
-    },
-    {
-      header: "Date Applied",
-      accessorKey: "dateApplied",
-      sortable: true,
-      cell: (loan) => (
-        <span>{new Date(loan?.dateApplied).toLocaleDateString()}</span>
-      ),
-    },
-    {
-      header: "Status",
-      accessorKey: "loanStatus",
-      sortable: true,
-      cell: (loan) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            loan.loanStatus === "Pending"
-              ? "bg-green-100 text-green-800"
-              : loan.loanStatus === "COMPLETED"
-              ? "bg-blue-100 text-blue-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {loan?.loanStatus}
-        </span>
-      ),
-    },
+
+    // {
+    //   header: "Status",
+    //   accessorKey: "loanStatus",
+    //   sortable: true,
+    //   cell: (loan) => (
+    //     <span
+    //       className={`px-2 py-1 rounded-full text-xs ${
+    //         loan.loanStatus === "Pending"
+    //           ? "bg-green-100 text-green-800"
+    //           : loan.loanStatus === "COMPLETED"
+    //           ? "bg-blue-100 text-blue-800"
+    //           : "bg-red-100 text-red-800"
+    //       }`}
+    //     >
+    //       {loan?.loanStatus}
+    //     </span>
+    //   ),
+    // },
     {
       header: "Actions",
-      accessorKey: "loanApplicationId",
+      accessorKey: "id",
       cell: (loan) => (
         <div className="flex space-x-2 justify-end">
           <Button
@@ -252,17 +249,8 @@ const Disbursements = () => {
           >
             Edit
           </Button>
-          {loan.loanStatus === "Pending" && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => handleApproveLoan(loan.loanApplicationId)}
-            >
-              Approve
-            </Button>
-          )}
 
-          {loan.loanStatus === "Pending" && (
+          {/* {loan.loanStatus === "Pending" && (
             <Button
               variant="secondary"
               size="sm"
@@ -271,12 +259,28 @@ const Disbursements = () => {
               Generate Repayment Schedule
             </Button>
           )}
+
+          {loan.loanStatus === "Pending" && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  Approve
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Loan Approval</DialogTitle>
+                </DialogHeader>
+                <ApproveAndGenerateRepayment loan={loan} approverId={1} />
+              </DialogContent>
+            </Dialog>
+          )} */}
         </div>
       ),
     },
   ];
 
-  const loantypescolumns: Column<LoanType>[] = [
+  const loantypescolumns: Column<LoanProduct>[] = [
     {
       header: "ID",
       accessorKey: "id",
@@ -353,14 +357,7 @@ const Disbursements = () => {
         </div>
 
         <div className="flex justify-end mb-4">
-          <Button
-            onClick={() => {
-              setShowForm(true);
-              setEditLoan(null);
-            }}
-          >
-            + Add Loan
-          </Button>
+          <LoanApplicationForm />
         </div>
 
         <Tabs
@@ -371,7 +368,7 @@ const Disbursements = () => {
         >
           <TabsList>
             <TabsTrigger value="applications">Loan Applications</TabsTrigger>
-            <TabsTrigger value="types">Loan Types</TabsTrigger>
+            <TabsTrigger value="types">Loan Products</TabsTrigger>
           </TabsList>
 
           <TabsContent value="applications">
@@ -399,7 +396,7 @@ const Disbursements = () => {
                   <DataTable
                     data={loans}
                     columns={columns}
-                    keyField="loanApplicationId"
+                    keyField="id"
                     pagination={true}
                     searchable={true}
                     pageSize={10}
@@ -416,19 +413,19 @@ const Disbursements = () => {
           <TabsContent value="types">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Loan Types</CardTitle>
+                <CardTitle>Loan Products</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading loanTypes...</span>
+                    <span className="ml-2">Loading products...</span>
                   </div>
                 ) : loanTypes?.length === 0 ? (
                   <div className="text-center py-10">
                     <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">
-                      No loanTypes found
+                      No products found
                     </h3>
                   </div>
                 ) : (
@@ -463,7 +460,7 @@ const Disbursements = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-500">Loan ID</h3>
-                    <p>{selectedLoan.loanApplicationId}</p>
+                    <p>{selectedLoan.id}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Member ID</h3>
@@ -473,230 +470,25 @@ const Disbursements = () => {
                     <h3 className="font-medium text-gray-500">Loan Type</h3>
                     <p>{getLoanTypeName(selectedLoan.loanTypeId)}</p>
                   </div> */}
-                  <div>
-                    <h3 className="font-medium text-gray-500">
-                      Application Date
-                    </h3>
-                    <p>
-                      {new Date(selectedLoan.dateApplied).toLocaleDateString()}
-                    </p>
-                  </div>
+
                   <div>
                     <h3 className="font-medium text-gray-500">Amount</h3>
-                    <p>KSH {selectedLoan.loanAmount.toLocaleString()}</p>
+                    <p>KSH {selectedLoan.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">
                       Monthly Repayment
                     </h3>
-                    <p>KSH {selectedLoan.monthlyRepayment.toLocaleString()}</p>
+                    <p>KSH {selectedLoan.termDays.toLocaleString()}</p>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Status</h3>
-                    <Badge variant={getStatusVariant(selectedLoan.loanStatus)}>
-                      {selectedLoan.loanStatus}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-500">Purpose</h3>
-                  <p>{selectedLoan.loanPurpose}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-500">Remarks</h3>
-                  <p>{selectedLoan.remarks}</p>
                 </div>
               </div>
             )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{editLoan ? "Update Loan" : "New Loan"}</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const formData = new FormData(form);
-                const payload = {
-                  memberId: Number(formData.get("memberId")),
-                  loanApplicationId: editLoan?.loanApplicationId ?? undefined,
-                  loanApplicationCode:
-                    formData.get("loanApplicationCode")?.toString() || "",
-                  dateApplied:
-                    formData.get("dateApplied")?.toString() ||
-                    (new Date() as unknown as string),
-                  approvedDate:
-                    formData.get("approvedDate")?.toString() || null,
-                  paymentTypeId: Number(formData.get("paymentTypeId")),
-                  loanStatus:
-                    formData.get("loanStatus")?.toString() || "Pending",
-                  loanTypeId: Number(formData.get("loanTypeId")),
-                  loanAmount: Number(formData.get("loanAmount")),
-                  monthlyRepayment: Number(formData.get("monthlyRepayment")),
-                  loanPurpose: formData.get("loanPurpose")?.toString() || "",
-                  remarks: formData.get("remarks")?.toString() || "",
-                };
-
-                try {
-                  if (editLoan) {
-                    await loanService.updateLoanApplication(payload);
-                    toast({ title: "Loan updated successfully." });
-                  } else {
-                    await loanService.createLoanApplication(payload);
-                    toast({ title: "Loan added successfully." });
-                  }
-                  setShowForm(false);
-                  setLoading(true); // Refresh
-                  const data = await loanService.getAllLoanApplications();
-                  setLoans(data);
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to submit loan.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="grid gap-4"
-            >
-              <div className="mb-4">
-                <label
-                  htmlFor="memberId"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Select Member
-                </label>
-                <select
-                  name="memberId"
-                  id="memberId"
-                  defaultValue={editLoan?.memberId || ""}
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                >
-                  <option value="" disabled>
-                    -- Select Member --
-                  </option>
-                  {members?.map((member) => (
-                    <option key={member.memberId} value={member.memberId}>
-                      {member.firstName} {member.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label
-                  htmlFor="paymentTypeId"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Payment Type
-                </label>
-                <select
-                  name="paymentTypeId"
-                  id="paymentTypeId"
-                  defaultValue={editLoan?.paymentTypeId || ""}
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                >
-                  <option value="" disabled>
-                    Select Payment Type
-                  </option>
-                  {paymenttypes?.map((pt) => (
-                    <option key={pt.paymentTypeId} value={pt.paymentTypeId}>
-                      {pt.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="paymentTypeId"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Loan Type
-                </label>
-                <select
-                  name="loanTypeId"
-                  id="loanTypeId"
-                  defaultValue={editLoan?.loanTypeId || ""}
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                >
-                  <option value="" disabled>
-                    Select Loan Type
-                  </option>
-                  {loanTypes?.map((pt) => (
-                    <option key={pt.id} value={pt.id}>
-                      {pt.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Loan Amount
-                </label>
-                <input
-                  type="number"
-                  name="loanAmount"
-                  defaultValue={editLoan?.loanAmount || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Monthy Repayment
-                </label>
-                <input
-                  type="number"
-                  name="monthlyRepayment"
-                  defaultValue={editLoan?.monthlyRepayment || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Loan Purpose
-                </label>
-                <textarea
-                  name="loanPurpose"
-                  defaultValue={editLoan?.loanPurpose || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Remarks
-                </label>
-                <textarea
-                  name="remarks"
-                  defaultValue={editLoan?.remarks || ""}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  rows={2}
-                />
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button type="submit">
-                  {editLoan ? "Update Loan" : "Add Loan"}
-                </Button>
-              </div>
-            </form>
           </DialogContent>
         </Dialog>
       </div>
     </DashboardLayout>
   );
 };
+
 export default Disbursements;

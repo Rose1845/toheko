@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Interface } from "node:readline";
+
 export interface AcknowledgementResponse {
   success: boolean;
   message: string;
@@ -72,6 +74,44 @@ export interface LoanType {
   status: string;
 }
 
+export interface LoanProduct  {
+  id: number;
+  name: string;
+  description: string;
+  minAmount: number;
+  maxAmount: number;
+  interestRate: number;
+  interestMethod: 'SIMPLE' | 'COMPOUND'; // add other methods if needed
+  minTermDays: number;
+  maxTermDays: number;
+  gracePeriodDays: number;
+  requiresCollateral: boolean;
+  requiresGuarantor: boolean;
+  requiresNextOfKin: boolean;
+  allowPenalties: boolean;
+  isActive: boolean;
+  maxGuarantors: number;
+  maxCollateralItems: number;
+};
+
+export interface LoanPenaltySetting  {
+  id: number;
+  loanProductId: number;
+  penaltyType: 'NONE' | 'FIXED' | 'PERCENTAGE'; // extend with other types as needed
+  penaltyValue: number;
+  isActive: boolean;
+};
+
+export interface LoanCollateralItem  {
+  id: number;
+  loanApplicationId: number;
+  type: string;
+  description: string;
+  estimatedValue: number;
+  ownerName: string;
+  ownerContact: string;
+};
+
 export interface LoanApplicationRequest {
   id?: number;
   loanPurpose: string;
@@ -88,10 +128,53 @@ export interface LoanApplicationRequest {
   remarks: string;
 }
 
-export interface LoanApplication extends LoanApplicationRequest {
+export type LoanGuarantor = {
   id: number;
-  applicationDate: string;
-}
+  loanApplicationId: number;
+  guarantorName: string;
+  relationship: string;
+  guarantorContact: string;
+  guarantorIdNumber: string;
+  guaranteedAmount: number;
+};
+
+export interface LoanPenalty {
+  id: number;
+  loanProductId: number;
+  penaltyType: string;
+  penaltyValue: number;
+  isActive: boolean;
+};
+
+
+
+export interface LoanNextOfKin {
+  id: number;
+  loanApplicationId: number;
+  name: string;
+  relationship: string;
+  phone: string;
+  email: string;
+  address: string;
+};
+
+
+
+export interface LoanApplication {
+  id: number;
+  loanProductId: number;
+  applicantId: number;
+  memberId: number;
+  name: string;
+  amount: number;
+  termDays: number;
+  guarantors: LoanGuarantor[];
+  nextOfKin: LoanNextOfKin[];
+  collateral: LoanCollateralItem[];
+};
+
+
+
 
 export interface LoanApprovalRequest {
   id?: number;
