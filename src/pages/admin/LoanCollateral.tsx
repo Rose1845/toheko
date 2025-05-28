@@ -74,15 +74,31 @@ const LoanCollateral = () => {
   const { toast } = useToast();
   const { data: loanTypes } = useQuery({
     queryKey: ["loan-types"],
-    queryFn: loanService.getAllLoanCollaterals,
+    queryFn: loanService.getAllLoanTypes,
+    onError: (error) => {
+      console.error("Error fetching loan types:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch loan types. Please try again later.",
+        variant: "destructive",
+      });
+    },
   });
 
   const { data: loanProducts } = useQuery({
     queryKey: ["loan-applications"],
     queryFn: loanService.getAllLoanApplications,
+    onError: (error) => {
+      console.error("Error fetching loan applications:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch loan applications. Please try again later.",
+        variant: "destructive",
+      });
+    },
   });
 
-  console.log("loan application", loanTypes);
+  console.log("loan application", loanProducts);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -97,21 +113,22 @@ const LoanCollateral = () => {
     },
   });
 
-  // Fetch Loan Productss
+  // Fetch Loan Collaterals
   const {
-    data: LoanPenaltys,
+    data: LoanCollaterals,
     isLoading,
     error,
     refetch,
   } = useQuery({
     queryKey: ["loancollaterals"],
-    queryFn: async () => {
-      try {
-        return await loanService.getAllLoanCollaterals();
-      } catch (error) {
-        console.error("Failed to fetch Loan Collaterals:", error);
-        return [] as LoanCollateralItem[];
-      }
+    queryFn: loanService.getAllLoanCollaterals,
+    onError: (error) => {
+      console.error("Failed to fetch Loan Collaterals:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch loan collaterals. Please try again later.",
+        variant: "destructive",
+      });
     },
   });
   const handleAddNew = () => {
@@ -300,21 +317,24 @@ const LoanCollateral = () => {
             <div>
               <CardTitle>Loan Collaterals</CardTitle>
               <CardDescription>
-                Manage the SACCO Loan Collaterals
+                Manage collaterals for loans here
               </CardDescription>
             </div>
             <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Loan Collaterals
+              <Plus className="mr-2 h-4 w-4" /> Add New
             </Button>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {error ? (
+              <div className="flex justify-center p-4">
+                <p className="text-red-500">Error loading loan collaterals. Please try again.</p>
+              </div>
+            ) : isLoading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="ml-2">Loading Loan Collaterals...</span>
               </div>
-            ) : LoanPenaltys?.length === 0 ? (
+            ) : LoanCollaterals?.length === 0 ? (
               <div className="text-center py-10">
                 <Users className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">
@@ -334,7 +354,7 @@ const LoanCollateral = () => {
               </div>
             ) : (
               <DataTable
-                data={LoanPenaltys}
+                data={LoanCollaterals || []}
                 columns={columns}
                 keyField="id"
                 pagination={true}

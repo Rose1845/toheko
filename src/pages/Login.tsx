@@ -17,7 +17,7 @@ import { toast } from "@/components/ui/sonner";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  username: z.string(),
+  username: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -125,11 +125,11 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username">username address</Label>
+                <Label htmlFor="username">Email address</Label>
                 <Input
                   id="username"
-                  type="username"
-                  placeholder="Enter your username"
+                  type="email"
+                  placeholder="Enter your email"
                   value={formData.username}
                   onChange={handleInputChange}
                   required

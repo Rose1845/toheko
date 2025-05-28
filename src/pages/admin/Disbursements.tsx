@@ -1,489 +1,1251 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
+import { disbursementService } from "@/services/disbursementService";
 import { loanService } from "@/services/loanService";
-import { LoanApplication, LoanProduct, LoanType } from "@/types/api";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { memberService } from "@/services/memberService";
+import { Disbursement, DisbursementRequest, DisbursementCompleteRequest, DisbursementFailCancelRequest, LoanApplication } from "@/types/api";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
-import { memberService } from "@/services/memberService";
-import { paymentTypeService } from "@/services/paymentTypeService";
-import axios from "axios";
-import { Column, DataTable } from "@/components/ui/data-table";
-import { Loader2, PiggyBank } from "lucide-react";
-import ApproveAndGenerateRepayment from "./ApproveAndGenerateRepayment";
-import LoanApplicationForm from "./loans/LoanApplication";
+import { Loader2, DollarSign, AlertTriangle, CheckCircle, XCircle, CreditCard, Clock, Search, Trash2, Edit } from "lucide-react";
+import { format } from "date-fns";
+
+// Form schemas
+const disbursementFormSchema = z.object({
+  disbursementCode: z.string().min(1, "Disbursement code is required"),
+  loanApplicationId: z.number().min(1, "Loan application is required"),
+  amount: z.coerce.number().min(1, "Amount must be greater than 0"),
+  disbursementDate: z.string().min(1, "Date is required"),
+  paymentMethod: z.string().min(1, "Payment method is required"),
+  paymentReference: z.string().optional(),
+  bankAccount: z.string().optional(),
+  mobileNumber: z.string().optional(),
+  remarks: z.string().optional(),
+  status: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+// Form schema for completing a disbursement
+const completeFormSchema = z.object({
+  paymentReference: z.string().min(1, "Payment reference is required"),
+});
+
+// Form schema for failing or canceling a disbursement
+const remarksFormSchema = z.object({
+  remarks: z.string().min(1, "Remarks are required"),
+});
+
+type DisbursementFormValues = z.infer<typeof disbursementFormSchema>;
+type CompleteFormValues = z.infer<typeof completeFormSchema>;
+type RemarksFormValues = z.infer<typeof remarksFormSchema>;
 
 const Disbursements = () => {
-  const [showForm, setShowForm] = useState(false);
-  const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const [loans, setLoans] = useState<LoanApplication[]>([]);
-  const [loanTypes, setLoanTypes] = useState<LoanProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedLoan, setSelectedLoan] = useState<LoanApplication | null>(
-    null
-  );
+  // State for tab management
+  const [activeTab, setActiveTab] = useState("all");
+  
+  // State for disbursements data
   const [showDetails, setShowDetails] = useState(false);
-  const [activeTab, setActiveTab] = useState("applications");
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showCompleteForm, setShowCompleteForm] = useState(false);
+  const [showFailForm, setShowFailForm] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedDisbursement, setSelectedDisbursement] = useState<Disbursement | null>(null);
+  const [disbursementToDelete, setDisbursementToDelete] = useState<Disbursement | null>(null);
+  
+  // Loading states
+  const [isAddLoading, setIsAddLoading] = useState(false);
+  const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isProcessLoading, setIsProcessLoading] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+
   const { toast } = useToast();
 
-  const { data: members } = useQuery({
+  // Form hooks
+  const disbursementForm = useForm<DisbursementFormValues>({
+    resolver: zodResolver(disbursementFormSchema),
+    defaultValues: {
+      disbursementCode: "",
+      loanApplicationId: 0,
+      amount: 0,
+      disbursementDate: new Date().toISOString().split("T")[0],
+      paymentMethod: "",
+      paymentReference: "",
+      bankAccount: "",
+      mobileNumber: "",
+      remarks: "",
+      status: "PENDING",
+      isActive: true,
+    },
+  });
+
+  const completeForm = useForm<CompleteFormValues>({
+    resolver: zodResolver(completeFormSchema),
+    defaultValues: {
+      paymentReference: "",
+    },
+  });
+
+  const remarksForm = useForm<RemarksFormValues>({
+    resolver: zodResolver(remarksFormSchema),
+    defaultValues: {
+      remarks: "",
+    },
+  });
+
+  // Queries
+  const { data: disbursements = [], isLoading: isDisbursementsLoading, refetch: refetchDisbursements } = useQuery({
+    queryKey: ["disbursements"],
+    queryFn: disbursementService.getAllDisbursements,
+  });
+
+  const { data: loanApplications = [], isLoading: isLoanApplicationsLoading } = useQuery({
+    queryKey: ["loan-applications"],
+    queryFn: loanService.getAllLoanApplications,
+  });
+
+  const { data: members = [], isLoading: isMembersLoading } = useQuery({
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
+
+  // Helper function to get member name
   const getMemberName = (memberId: number) => {
     const member = members?.find((m) => m.memberId === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : "Unknown Member";
+    return member ? `${member.firstName} ${member.lastName}` : "Unknown";
+  };
+  
+  // Helper to get loan application by ID
+  const getLoanApplication = (id: number): LoanApplication | undefined => {
+    return loanApplications.find(loan => loan.id === id);
   };
 
-  const { data: paymenttypes } = useQuery({
-    queryKey: ["payment-types"],
-    queryFn: paymentTypeService.getAllPaymentTypes,
-  });
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [loansData, loanTypesData] = await Promise.all([
-          loanService.getAllLoanApplications(),
-          loanService.getAllLoanTypes(),
-        ]);
-        setLoans(loansData);
-        setLoanTypes(loanTypesData);
-      } catch (error) {
-        console.error("Error fetching loan data:", error);
-        toast({
-          title: "Error fetching loan data",
-          description:
-            "There was an error loading the loans information. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [toast]);
-
-  const handleViewDetails = (loan: LoanApplication) => {
-    setSelectedLoan(loan);
+  // Handler functions for CRUD operations
+  const handleViewDetails = (disbursement: Disbursement) => {
+    setSelectedDisbursement(disbursement);
     setShowDetails(true);
   };
 
-  const getLoanTypeName = (loanTypeId: number): string => {
-    const loanType = loanTypes.find((type) => type.id === loanTypeId);
-    return loanType ? loanType.name : "Unknown";
+  const handleEditDisbursement = (disbursement: Disbursement) => {
+    setSelectedDisbursement(disbursement);
+    
+    // Reset form with disbursement data
+    disbursementForm.reset({
+      disbursementCode: disbursement.disbursementCode,
+      loanApplicationId: disbursement.loanApplicationId,
+      amount: disbursement.amount,
+      disbursementDate: disbursement.disbursementDate.split('T')[0],
+      paymentMethod: disbursement.paymentMethod,
+      paymentReference: disbursement.paymentReference,
+      bankAccount: disbursement.bankAccount,
+      mobileNumber: disbursement.mobileNumber,
+      remarks: disbursement.remarks,
+      status: disbursement.status,
+      isActive: disbursement.isActive,
+    });
+    
+    setShowEditForm(true);
   };
 
+  const handleAddDisbursement = () => {
+    disbursementForm.reset({
+      disbursementCode: '',
+      loanApplicationId: 0,
+      amount: 0,
+      disbursementDate: new Date().toISOString().split('T')[0],
+      paymentMethod: '',
+      paymentReference: '',
+      bankAccount: '',
+      mobileNumber: '',
+      remarks: '',
+      status: 'PENDING',
+      isActive: true,
+    });
+    setShowAddForm(true);
+  };
+
+  const handleProcessDisbursement = async (id: number) => {
+    try {
+      setIsProcessLoading(true);
+      await disbursementService.processDisbursement(id);
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been processed successfully.',
+      });
+      refetchDisbursements();
+    } catch (error) {
+      console.error('Error processing disbursement:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process disbursement.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessLoading(false);
+    }
+  };
+
+  const handleCompleteDisbursement = (disbursement: Disbursement) => {
+    setSelectedDisbursement(disbursement);
+    completeForm.reset({
+      paymentReference: '',
+    });
+    setShowCompleteForm(true);
+  };
+
+  const handleFailDisbursement = (disbursement: Disbursement) => {
+    setSelectedDisbursement(disbursement);
+    remarksForm.reset({
+      remarks: '',
+    });
+    setShowFailForm(true);
+  };
+
+  const handleCancelDisbursement = (disbursement: Disbursement) => {
+    setSelectedDisbursement(disbursement);
+    remarksForm.reset({
+      remarks: '',
+    });
+    setShowCancelForm(true);
+  };
+
+  const handleConfirmDelete = (disbursement: Disbursement) => {
+    setDisbursementToDelete(disbursement);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteDisbursement = async () => {
+    if (!disbursementToDelete) return;
+
+    try {
+      setIsDeleteLoading(true);
+      await disbursementService.deleteDisbursement(disbursementToDelete.id);
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been deleted successfully.',
+      });
+      setShowDeleteConfirm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error('Error deleting disbursement:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete disbursement.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleteLoading(false);
+      setDisbursementToDelete(null);
+    }
+  };
+
+  // Form submission handlers
+  const onSubmitEdit = async (values: DisbursementFormValues) => {
+    if (!selectedDisbursement) return;
+
+    try {
+      setIsEditLoading(true);
+      // Ensure all required fields are provided for DisbursementRequest
+      const disbursementData: DisbursementRequest = {
+        disbursementCode: values.disbursementCode,
+        loanApplicationId: values.loanApplicationId || selectedDisbursement.loanApplicationId,
+        amount: values.amount,
+        disbursementDate: values.disbursementDate,
+        paymentMethod: values.paymentMethod,
+        disbursedBy: selectedDisbursement.disbursedBy,
+        paymentReference: values.paymentReference,
+        bankAccount: values.bankAccount,
+        mobileNumber: values.mobileNumber,
+        remarks: values.remarks,
+        status: values.status,
+        isActive: values.isActive
+      };
+      
+      await disbursementService.updateDisbursement(selectedDisbursement.id, disbursementData);
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been updated successfully.',
+      });
+      setShowEditForm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error("Error updating disbursement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update disbursement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
+  const onSubmitAdd = async (values: DisbursementFormValues) => {
+    try {
+      setIsAddLoading(true);
+      // Ensure all required fields are provided for DisbursementRequest
+      const disbursementData: DisbursementRequest = {
+        disbursementCode: values.disbursementCode,
+        loanApplicationId: values.loanApplicationId,
+        amount: values.amount,
+        disbursementDate: values.disbursementDate,
+        paymentMethod: values.paymentMethod,
+        disbursedBy: 1, // This should be the current user's ID in a real app
+        paymentReference: values.paymentReference,
+        bankAccount: values.bankAccount,
+        mobileNumber: values.mobileNumber,
+        remarks: values.remarks,
+        status: values.status,
+        isActive: values.isActive
+      };
+      
+      await disbursementService.createDisbursement(disbursementData);
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been created successfully.',
+      });
+      setShowAddForm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error("Error creating disbursement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create disbursement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddLoading(false);
+    }
+  };
+
+  const onSubmitComplete = async (values: CompleteFormValues) => {
+    if (!selectedDisbursement) return;
+
+    try {
+      await disbursementService.completeDisbursement(selectedDisbursement.id, {
+        id: selectedDisbursement.id,
+        paymentReference: values.paymentReference,
+      });
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been completed successfully.',
+      });
+      setShowCompleteForm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error("Error completing disbursement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete disbursement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onSubmitFail = async (values: RemarksFormValues) => {
+    if (!selectedDisbursement) return;
+
+    try {
+      await disbursementService.failDisbursement(selectedDisbursement.id, {
+        id: selectedDisbursement.id,
+        remarks: values.remarks,
+      });
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been marked as failed.',
+      });
+      setShowFailForm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error("Error failing disbursement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark disbursement as failed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onSubmitCancel = async (values: RemarksFormValues) => {
+    if (!selectedDisbursement) return;
+
+    try {
+      await disbursementService.cancelDisbursement(selectedDisbursement.id, {
+        id: selectedDisbursement.id,
+        remarks: values.remarks,
+      });
+      toast({
+        title: 'Success',
+        description: 'Disbursement has been cancelled successfully.',
+      });
+      setShowCancelForm(false);
+      refetchDisbursements();
+    } catch (error) {
+      console.error("Error cancelling disbursement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel disbursement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Helper for status badge variant
   const getStatusVariant = (status: string) => {
     switch (status.toUpperCase()) {
-      case "Approved":
+      case "COMPLETED":
+        return "success";
+      case "PROCESSING":
         return "default";
-      case "Pending":
+      case "PENDING":
         return "secondary";
-      case "Rejected":
+      case "FAILED":
         return "destructive";
-      case "Closed":
-        return "destructive";
+      case "CANCELLED":
+        return "outline";
       default:
         return "outline";
     }
   };
-  const handleApproveLoan = async (loanApplicationId: number) => {
-    try {
-      await loanService.approveLoan(loanApplicationId);
-      toast({
-        title: "Loan Approved",
-        description: "The loan has been successfully approved.",
-      });
-      // Refresh loans
-      const updatedLoans = await loanService.getAllLoanApplications();
-      setLoans(updatedLoans);
-    } catch (error) {
-      console.error("Error approving loan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve the loan. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
-  const handleGenerateRepaymentSchedule = async (loan: LoanApplication) => {
-    console.log("loan", loan);
-
-    const confirmed = window.confirm(
-      "Are you sure you want to generate the repayment schedule?"
-    );
-    if (!confirmed) return;
-
-    try {
-      const params = {
-        loanId: loan.id as unknown as string,
-        loanAmount: loan.amount,
-        interestRate: Number(12), // Fixed interest rate as 12
-        termInMonths: loan.termDays,
-        startDate: new Date().toISOString().split("T")[0],
-        interestMethod: "REDUCING_BALANCE",
-      };
-
-      console.log("params", params);
-
-      const queryString = new URLSearchParams(params as any).toString();
-
-      const url = `https://sacco-app-production.up.railway.app/api/v1/repayment-schedules/generate?${queryString}`;
-
-      const repayment = await axios.post(`${url}`);
-
-      console.log("repayment", repayment.data);
-
-      toast({
-        title: "Repayment Schedule Generated",
-        description: "The repayment schedule has been successfully generated.",
-      });
-    } catch (error) {
-      console.error("Error generating repayment schedule:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate repayment schedule.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const columns: Column<LoanApplication>[] = [
+  // DataTable column definitions
+  const columns: Column<Disbursement>[] = [
     {
       header: "ID",
       accessorKey: "id",
-      sortable: true,
+      cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
+    },
+    {
+      header: "Code",
+      accessorKey: "disbursementCode",
+    },
+    {
+      header: "Loan Application",
+      accessorKey: "loanApplicationCode",
     },
     {
       header: "Member",
-      accessorKey: "memberId",
-      sortable: true,
-      cell: (saving) => {
-        const member = members?.find((m) => m.memberId === saving.memberId);
+      accessorKey: "memberName",
+    },
+    {
+      header: "Amount",
+      accessorKey: "amount",
+      cell: (row) => (
+        <span className="font-medium">
+          KSH {Number(row.getValue()).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      header: "Date",
+      accessorKey: "disbursementDate",
+      cell: (row) => {
+        const date = row.getValue() as string;
+        return date ? format(new Date(date), "PPP") : "N/A";
+      },
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: (row) => {
+        const status = row.getValue() as string;
         return (
-          <span className="font-medium">
-            {member
-              ? `${member.firstName} ${member.lastName}`
-              : `Member #${saving.memberId}`}
-          </span>
+          <Badge variant={getStatusVariant(status)}>{status}</Badge>
         );
       },
     },
-    // {
-    //   header: "loanApplicationCode",
-    //   accessorKey: "loanApplicationCode",
-    //   sortable: true,
-    //   cell: (loan) => (
-    //     <span className="font-medium">{loan?.}</span>
-    //   ),
-    // },
-    {
-      header: "termDays",
-      accessorKey: "termDays",
-      sortable: true,
-      cell: (loan) => <span>{loan?.termDays}</span>,
-    },
-
-    // {
-    //   header: "Status",
-    //   accessorKey: "loanStatus",
-    //   sortable: true,
-    //   cell: (loan) => (
-    //     <span
-    //       className={`px-2 py-1 rounded-full text-xs ${
-    //         loan.loanStatus === "Pending"
-    //           ? "bg-green-100 text-green-800"
-    //           : loan.loanStatus === "COMPLETED"
-    //           ? "bg-blue-100 text-blue-800"
-    //           : "bg-red-100 text-red-800"
-    //       }`}
-    //     >
-    //       {loan?.loanStatus}
-    //     </span>
-    //   ),
-    // },
     {
       header: "Actions",
-      accessorKey: "id",
-      cell: (loan) => (
-        <div className="flex space-x-2 justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewDetails(loan)}
-          >
-            View
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setEditLoan(loan);
-              setShowForm(true);
-            }}
-          >
-            Edit
-          </Button>
-
-          {/* {loan.loanStatus === "Pending" && (
+      id: "actions",
+      cell: ({ row }) => {
+        const disbursement = row.original;
+        const isActive = disbursement.isActive;
+        const status = disbursement.status;
+        
+        return (
+          <div className="flex items-center gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
-              onClick={() => handleGenerateRepaymentSchedule(loan)}
+              onClick={() => handleViewDetails(disbursement)}
             >
-              Generate Repayment Schedule
+              <Search className="h-4 w-4" />
             </Button>
-          )}
+            
+            {status === "PENDING" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditDisbursement(disbursement)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handleProcessDisbursement(disbursement.id)}
+                  disabled={isProcessLoading}
+                >
+                  {isProcessLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleConfirmDelete(disbursement)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
 
-          {loan.loanStatus === "Pending" && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  Approve
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Loan Approval</DialogTitle>
-                </DialogHeader>
-                <ApproveAndGenerateRepayment loan={loan} approverId={1} />
-              </DialogContent>
-            </Dialog>
-          )} */}
-        </div>
-      ),
+            {status === "PROCESSING" && (
+              <>
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={() => handleCompleteDisbursement(disbursement)}
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleFailDisbursement(disbursement)}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCancelDisbursement(disbursement)}
+                >
+                  <Clock className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
-  const loantypescolumns: Column<LoanProduct>[] = [
-    {
-      header: "ID",
-      accessorKey: "id",
-      sortable: true,
-    },
-
-    {
-      header: "Name",
-      accessorKey: "name",
-      sortable: true,
-      cell: (loant) => <span className="font-medium">{loant?.name}</span>,
-    },
-    {
-      header: "MinAmount",
-      accessorKey: "minAmount",
-      sortable: true,
-      cell: (loant) => <span>{loant?.minAmount}</span>,
-    },
-    {
-      header: "Maximum AMount",
-      accessorKey: "maxAmount",
-      sortable: true,
-      cell: (loant) => <span>{loant.maxAmount}</span>,
-    },
-    {
-      header: "InterestRate",
-      accessorKey: "interestRate",
-      sortable: true,
-      cell: (loant) => <span>{loant?.interestRate}</span>,
-    },
-    {
-      header: "Interest Method",
-      accessorKey: "interestMethod",
-      sortable: true,
-      cell: (loant) => <span>{loant?.interestMethod}</span>,
-    },
-    {
-      header: "Actions",
-      accessorKey: "id",
-      cell: (loant) => (
-        <div className="flex space-x-2 justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            // onClick={() => handleViewDetails(loan)}
-          >
-            View
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            // onClick={() => {
-            //   setEditLoan(loan);
-            //   setShowForm(true);
-            // }}
-          >
-            Edit
-          </Button>
-        </div>
-      ),
-    },
-  ];
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Loans Management
-          </h1>
-          <p className="text-gray-500">
-            View and manage all loan applications and loan types
-          </p>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Disbursements Management</h1>
+          <Button onClick={handleAddDisbursement} className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            New Disbursement
+          </Button>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <LoanApplicationForm />
-        </div>
-
-        <Tabs
-          defaultValue="applications"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full mb-6"
-        >
-          <TabsList>
-            <TabsTrigger value="applications">Loan Applications</TabsTrigger>
-            <TabsTrigger value="types">Loan Products</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-4 w-full max-w-md">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="processing">Processing</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="applications">
+          <TabsContent value="all" className="pt-4">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Loan Applications</CardTitle>
+                <CardTitle>All Disbursements</CardTitle>
+                <CardDescription>View and manage all disbursements</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
+                {isDisbursementsLoading ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading Loans...</span>
+                    <span className="ml-2">Loading disbursements...</span>
                   </div>
-                ) : loans?.length === 0 ? (
+                ) : disbursements.length === 0 ? (
                   <div className="text-center py-10">
-                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <DollarSign className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">
-                      No loans found
+                      No disbursements found
                     </h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Get started by applting a new loan.
+                      Get started by creating a new disbursement.
                     </p>
                   </div>
                 ) : (
                   <DataTable
-                    data={loans}
+                    data={disbursements}
                     columns={columns}
                     keyField="id"
                     pagination={true}
                     searchable={true}
                     pageSize={10}
                     pageSizeOptions={[5, 10, 25, 50]}
-                    emptyMessage="No loans found"
-                    loading={loading}
-                    // onRowClick={(loan) => handleEdit(saving)}
+                    emptyMessage="No disbursements found"
+                    loading={isDisbursementsLoading}
                   />
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="types">
+          <TabsContent value="pending" className="pt-4">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Loan Products</CardTitle>
+                <CardTitle>Pending Disbursements</CardTitle>
+                <CardDescription>Disbursements waiting to be processed</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading products...</span>
-                  </div>
-                ) : loanTypes?.length === 0 ? (
-                  <div className="text-center py-10">
-                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">
-                      No products found
-                    </h3>
-                  </div>
-                ) : (
-                  <DataTable
-                    data={loanTypes}
-                    columns={loantypescolumns}
-                    keyField="id"
-                    pagination={true}
-                    searchable={true}
-                    pageSize={10}
-                    pageSizeOptions={[5, 10, 25, 50]}
-                    emptyMessage="No loanTypes found"
-                    loading={loading}
-                    // onRowClick={(loan) => handleEdit(saving)}
-                  />
-                )}
+                <DataTable
+                  data={disbursements.filter(d => d.status === 'PENDING')}
+                  columns={columns}
+                  keyField="id"
+                  pagination={true}
+                  searchable={true}
+                  pageSize={10}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  emptyMessage="No pending disbursements found"
+                  loading={isDisbursementsLoading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="processing" className="pt-4">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Processing Disbursements</CardTitle>
+                <CardDescription>Disbursements currently being processed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={disbursements.filter(d => d.status === 'PROCESSING')}
+                  columns={columns}
+                  keyField="id"
+                  pagination={true}
+                  searchable={true}
+                  pageSize={10}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  emptyMessage="No processing disbursements found"
+                  loading={isDisbursementsLoading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="completed" className="pt-4">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Completed Disbursements</CardTitle>
+                <CardDescription>Disbursements that have been completed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={disbursements.filter(d => d.status === 'COMPLETED')}
+                  columns={columns}
+                  keyField="id"
+                  pagination={true}
+                  searchable={true}
+                  pageSize={10}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  emptyMessage="No completed disbursements found"
+                  loading={isDisbursementsLoading}
+                />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
+        {/* View Disbursement Details Dialog */}
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Loan Application Details</DialogTitle>
+              <DialogTitle>Disbursement Details</DialogTitle>
               <DialogDescription>
-                Complete information about the selected loan application
+                Complete information about the selected disbursement
               </DialogDescription>
             </DialogHeader>
-            {selectedLoan && (
+            {selectedDisbursement && (
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-medium text-gray-500">Loan ID</h3>
-                    <p>{selectedLoan.id}</p>
+                    <h3 className="font-medium text-gray-500">Disbursement ID</h3>
+                    <p>{selectedDisbursement.id}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-500">Member ID</h3>
-                    <p>{selectedLoan.memberId}</p>
+                    <h3 className="font-medium text-gray-500">Code</h3>
+                    <p>{selectedDisbursement.disbursementCode}</p>
                   </div>
-                  {/* <div>
-                    <h3 className="font-medium text-gray-500">Loan Type</h3>
-                    <p>{getLoanTypeName(selectedLoan.loanTypeId)}</p>
-                  </div> */}
-
+                  <div>
+                    <h3 className="font-medium text-gray-500">Loan Application</h3>
+                    <p>{selectedDisbursement.loanApplicationCode}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Member</h3>
+                    <p>{selectedDisbursement.memberName}</p>
+                  </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Amount</h3>
-                    <p>KSH {selectedLoan.amount.toLocaleString()}</p>
+                    <p>KSH {selectedDisbursement.amount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-500">
-                      Monthly Repayment
-                    </h3>
-                    <p>KSH {selectedLoan.termDays.toLocaleString()}</p>
+                    <h3 className="font-medium text-gray-500">Date</h3>
+                    <p>{format(new Date(selectedDisbursement.disbursementDate), "PPP")}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Status</h3>
+                    <Badge variant={getStatusVariant(selectedDisbursement.status)}>
+                      {selectedDisbursement.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Payment Method</h3>
+                    <p>{selectedDisbursement.paymentMethod}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Payment Reference</h3>
+                    <p>{selectedDisbursement.paymentReference || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Bank Account</h3>
+                    <p>{selectedDisbursement.bankAccount || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Mobile Number</h3>
+                    <p>{selectedDisbursement.mobileNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Disbursed By</h3>
+                    <p>{selectedDisbursement.disbursedByName}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <h3 className="font-medium text-gray-500">Remarks</h3>
+                    <p>{selectedDisbursement.remarks || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Created At</h3>
+                    <p>{format(new Date(selectedDisbursement.createdAt), "PPP")}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Updated At</h3>
+                    <p>{format(new Date(selectedDisbursement.updatedAt), "PPP")}</p>
                   </div>
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Disbursement Form Dialog */}
+        <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Disbursement</DialogTitle>
+              <DialogDescription>
+                Update the disbursement details below
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...disbursementForm}>
+              <form onSubmit={disbursementForm.handleSubmit(onSubmitEdit)} className="space-y-4">
+                <FormField
+                  control={disbursementForm.control}
+                  name="disbursementCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disbursement Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="disbursementDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disbursement Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Method</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                          <SelectItem value="MOBILE_MONEY">Mobile Money</SelectItem>
+                          <SelectItem value="CASH">Cash</SelectItem>
+                          <SelectItem value="CHEQUE">Cheque</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="paymentReference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Reference</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="bankAccount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Account</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="mobileNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Active</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button
+                    type="submit"
+                    disabled={isEditLoading}
+                  >
+                    {isEditLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      'Update Disbursement'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Disbursement Form Dialog */}
+        <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+          <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader className="space-y-3 pb-2 border-b">
+              <div className="flex items-center space-x-2">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <DollarSign className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl">Add New Disbursement</DialogTitle>
+                  <DialogDescription className="text-sm opacity-80">
+                    Enter the disbursement details to create a new disbursement record
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <Form {...disbursementForm}>
+              <form onSubmit={disbursementForm.handleSubmit(onSubmitAdd)} className="space-y-5 py-4">
+                <FormField
+                  control={disbursementForm.control}
+                  name="disbursementCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disbursement Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="loanApplicationId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Loan Application</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value ? field.value.toString() : undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select loan application" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {loanApplications.map((loan) => (
+                            <SelectItem key={loan.id} value={loan.id.toString()}>
+                              {loan.loanApplicationCode || `Loan #${loan.id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="disbursementDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disbursement Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Method</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                          <SelectItem value="MOBILE_MONEY">Mobile Money</SelectItem>
+                          <SelectItem value="CASH">Cash</SelectItem>
+                          <SelectItem value="CHEQUE">Cheque</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="paymentReference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Reference</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="bankAccount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Account</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="mobileNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={disbursementForm.control}
+                  name="remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button
+                    type="submit"
+                    disabled={isAddLoading}
+                  >
+                    {isAddLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Disbursement'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Complete Disbursement Dialog */}
+        <Dialog open={showCompleteForm} onOpenChange={setShowCompleteForm}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Complete Disbursement</DialogTitle>
+              <DialogDescription>
+                Enter the payment reference to complete this disbursement.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...completeForm}>
+              <form onSubmit={completeForm.handleSubmit(onSubmitComplete)} className="space-y-4">
+                <FormField
+                  control={completeForm.control}
+                  name="paymentReference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Reference</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter payment reference" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit" variant="default">
+                    Complete Disbursement
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Fail Disbursement Dialog */}
+        <Dialog open={showFailForm} onOpenChange={setShowFailForm}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Mark as Failed</DialogTitle>
+              <DialogDescription>
+                Provide a reason for marking this disbursement as failed.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...remarksForm}>
+              <form onSubmit={remarksForm.handleSubmit(onSubmitFail)} className="space-y-4">
+                <FormField
+                  control={remarksForm.control}
+                  name="remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reason</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Enter reason for failure" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit" variant="destructive">
+                    Mark as Failed
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel Disbursement Dialog */}
+        <Dialog open={showCancelForm} onOpenChange={setShowCancelForm}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Cancel Disbursement</DialogTitle>
+              <DialogDescription>
+                Provide a reason for cancelling this disbursement.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...remarksForm}>
+              <form onSubmit={remarksForm.handleSubmit(onSubmitCancel)} className="space-y-4">
+                <FormField
+                  control={remarksForm.control}
+                  name="remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reason</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Enter reason for cancellation" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit" variant="outline">
+                    Cancel Disbursement
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
+                Confirm Deletion
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this disbursement? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteDisbursement}
+                disabled={isDeleteLoading}
+              >
+                {isDeleteLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

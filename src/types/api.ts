@@ -205,6 +205,66 @@ export interface AccountSuspensionRequest {
   suspendedUntil?: string;
 }
 
+// Group interfaces
+export interface Group {
+  createDate: string;
+  lastModified: string;
+  createdBy: number;
+  lastModifiedBy: number;
+  version: number;
+  groupId: number;
+  groupName: string;
+  groupType: string;
+  registrationNumber: string;
+  phoneNumber: string;
+  email: string;
+  physicalAddress: string;
+  status: string;
+  approvedAt: string;
+  suspensionReason: string;
+  suspendedAt: string;
+  reactivatedAt: string;
+}
+
+export interface GroupRequest {
+  groupName: string;
+  groupType: string;
+  registrationNumber: string;
+  phoneNumber: string;
+  email: string;
+  physicalAddress: string;
+  officials: GroupOfficial[];
+}
+
+export interface GroupOfficial {
+  id?: number;
+  createDate?: string;
+  lastModified?: string;
+  createdBy?: number;
+  lastModifiedBy?: number;
+  version?: number;
+  name: string;
+  phoneNumber: string;
+  email: string;
+  role: string;
+  groupId?: number;
+  group?: {
+    groupId: number;
+    groupName: string;
+    groupType: string;
+    registrationNumber: string;
+    phoneNumber: string;
+    email: string;
+    physicalAddress: string;
+    status: string;
+  };
+}
+
+export interface GroupSuspensionRequest {
+  reason: string;
+  suspendedUntil?: string;
+}
+
 // export interface AccountType {
 //   id: number;
 //   name: string;
@@ -397,4 +457,163 @@ export interface RoleDTO {
   roleDescription: string;
   roleStatus: string;
   permissionIds?: number[];
+}
+
+// Repayment types
+export interface Repayment {
+  id: number;
+  repaymentCode: string;
+  loanId: number;
+  loanCode: string;
+  memberName: string;
+  amount: number;
+  principalAmount: number;
+  interestAmount: number;
+  penalty: number;
+  dueDate: string;
+  paymentDate: string | null;
+  status: 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'OVERDUE' | 'WAIVED' | 'CANCELLED';
+  paymentReference: string;
+  paymentMethod: string;
+  receivedBy: number | null;
+  receivedByName: string | null;
+  remarks: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RepaymentRequest {
+  id?: number;
+  repaymentCode?: string;
+  loanId: number;
+  amount: number;
+  principalAmount: number;
+  interestAmount: number;
+  dueDate: string;
+  status?: string;
+  paymentReference?: string;
+  paymentMethod?: string;
+  receivedBy?: number;
+  remarks?: string;
+}
+
+export interface RecordPaymentRequest {
+  id: number;
+  amount: number;
+  paymentReference: string;
+  paymentMethod: string;
+  receivedBy: number;
+  remarks?: string;
+}
+
+export interface WaiveRequest {
+  id: number;
+  remarks: string;
+}
+
+export interface CancelRequest {
+  id: number;
+  remarks: string;
+}
+
+// Disbursement interfaces
+export interface Disbursement {
+  id: number;
+  disbursementCode: string;
+  loanApplicationId: number;
+  loanApplicationCode: string;
+  memberName: string;
+  amount: number;
+  disbursementDate: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  paymentReference: string;
+  paymentMethod: string;
+  bankAccount: string;
+  mobileNumber: string;
+  disbursedBy: number;
+  disbursedByName: string;
+  remarks: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DisbursementRequest {
+  id?: number;
+  disbursementCode: string;
+  loanApplicationId: number;
+  amount: number;
+  disbursementDate: string;
+  status?: string;
+  paymentReference?: string;
+  paymentMethod: string;
+  bankAccount?: string;
+  mobileNumber?: string;
+  disbursedBy: number;
+  remarks?: string;
+  isActive?: boolean;
+}
+
+export interface DisbursementCompleteRequest {
+  id: number;
+  paymentReference: string;
+}
+
+export interface DisbursementFailCancelRequest {
+  id: number;
+  remarks: string;
+}
+
+// Repayment Schedule interfaces
+export interface RepaymentSchedule {
+  id: number;
+  loanId: number;
+  loanCode: string;
+  memberName: string;
+  installmentNumber: number;
+  dueDate: string;
+  principalAmount: number;
+  interestAmount: number;
+  totalAmount: number;
+  remainingPrincipal: number;
+  paidAmount: number;
+  status: 'PENDING' | 'PAID' | 'PARTIALLY_PAID' | 'OVERDUE' | 'WAIVED' | 'CANCELLED';
+  paymentDate: string;
+  remarks: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RepaymentScheduleRequest {
+  id?: number;
+  loanId: number;
+  installmentNumber: number;
+  dueDate: string;
+  principalAmount: number;
+  interestAmount: number;
+  totalAmount: number;
+  remainingPrincipal: number;
+  paidAmount: number;
+  status: string;
+  paymentDate: string;
+  remarks: string;
+  isActive: boolean;
+}
+
+export interface GenerateScheduleRequest {
+  loanId: number;
+  loanAmount: number;
+  interestRate: number;
+  termInMonths: number;
+  startDate: string;
+  interestMethod: string;
+}
+
+export interface RecordSchedulePaymentRequest {
+  id: number;
+  amount: number;
+  paymentDate: string;
+  remarks?: string;
 }
