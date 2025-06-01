@@ -6,9 +6,15 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 3000
-    
-    ,
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'https://sacco-app-production.up.railway.app',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      }
+    }
   },
   plugins: [
     react(),

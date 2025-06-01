@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { toast } from "@/components/ui/sonner";
 
+// Base URL for API requests
 const API_BASE_URL = 'https://sacco-app-production.up.railway.app';
 
 const apiClient = axios.create({

@@ -24,13 +24,15 @@ import Permissions from "./pages/admin/Permissions";
 import BoardMembers from "./pages/admin/BoardMembers";
 import Savings from "./pages/admin/Savings";
 import Roles from "./pages/admin/Roles";
-import RepaymentSchedule from "./pages/admin/RepaymentSchedule";
+import RepaymentSchedules from "./pages/admin/RepaymentSchedules";
 import Repayments from "./pages/admin/Repayments";
 import Disbursements from "./pages/admin/Disbursements";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoanProducts from "./pages/admin/LoanProducts";
 import LoanPenalties from "./pages/admin/LoanPenalties";
 import LoanCollateral from "./pages/admin/LoanCollateral";
+import LoanRepayments from "./pages/admin/LoanRepayments";
+import Groups from "./pages/admin/Groups";
 
 const queryClient = new QueryClient();
 
@@ -60,11 +62,13 @@ const App = () => (
               path="/admin/loan-collaterals"
               element={<LoanCollateral />}
             />
+            
+            <Route path="/admin/groups" element={<Groups />} />
             <Route
               path="/admin/loan-schedules"
-              element={<RepaymentSchedule />}
+              element={<RepaymentSchedules />}
             />
-            <Route path="/admin/loan-repayments" element={<Repayments />} />
+            <Route path="/admin/loan-repayments" element={<LoanRepayments />} />
             <Route
               path="/admin/loan-disbursements"
               element={<Disbursements />}

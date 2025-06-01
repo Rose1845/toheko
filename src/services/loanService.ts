@@ -39,10 +39,23 @@ export const loanService = {
   },
 
   getAllLoanCollaterals: async (): Promise<LoanCollateralItem[]> => {
-    const response = await apiClient.get('/api/v1/loan-collaterals?page=0&size=1&sort=');
-    console.log({response});
-    
-    return response.data.content;
+    try {
+      const response = await apiClient.get('/api/v1/loan-collaterals?page=0&size=100&sort=id,desc');
+      console.log({response});
+      
+      // Check if we have the expected data structure
+      if (response.data && response.data.data && response.data.data.content) {
+        return response.data.data.content;
+      } else if (response.data && response.data.content) {
+        return response.data.content;
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching loan collaterals:', error);
+      return [];
+    }
   },
 
   createLoanApplication: async (data): Promise<LoanApplicationRequest>=>{
@@ -109,8 +122,22 @@ export const loanService = {
 
   // Loan Applications
   getAllLoanApplications: async (): Promise<LoanApplication[]> => {
-    const response = await apiClient.get('/api/v1/loan-applications?page=0&size=10000000&sort=100000000000');
-    return response.data.content;
+    try {
+      const response = await apiClient.get('/api/v1/loan-applications?page=0&size=100&sort=id,desc');
+      
+      // Check if we have the expected data structure
+      if (response.data && response.data.data && response.data.data.content) {
+        return response.data.data.content;
+      } else if (response.data && response.data.content) {
+        return response.data.content;
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching loan applications:', error);
+      return [];
+    }
   },
 
   getAllLoanPenalties: async (): Promise<LoanPenalty[]> => {

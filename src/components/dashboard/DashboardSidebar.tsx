@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Wallet,
   CreditCard as CreditCardIcon,
+  UsersRound,
 } from "lucide-react";
 
 const SidebarLink = ({
@@ -203,6 +204,13 @@ export default function DashboardSidebar() {
             active={isActive("/admin/member-management")}
             collapsed={collapsed}
           />
+          <SidebarLink
+            to="/admin/groups"
+            icon={<UsersRound className="h-5 w-5" />}
+            label="Groups"
+            active={isActive("/admin/groups")}
+            collapsed={collapsed}
+          />
           {/* <SidebarLink
             to="/admin/next-of-kin"
             icon={<UserPlus className="h-5 w-5" />}
@@ -338,6 +346,7 @@ export default function DashboardSidebar() {
               </p>
             )}
           </div>
+          
           <SidebarLink
             to="/admin/roles"
             icon={<Shield className="h-5 w-5" />}
