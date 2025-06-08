@@ -277,16 +277,7 @@ const Groups: React.FC = () => {
     
     setIsOfficialAddLoading(true);
     try {
-      // Ensure all required fields are present for GroupOfficialRequest
-      const officialData: GroupOfficialRequest = {
-        name: values.name || "",
-        phoneNumber: values.phoneNumber || "",
-        email: values.email || "",
-        role: values.role || "",
-        groupId: selectedGroup.groupId
-      };
-      
-      await groupService.createGroupOfficial(officialData);
+      await groupService.createGroupOfficial(values);
       toast({
         title: "Success",
         description: "Official added successfully.",
@@ -311,16 +302,7 @@ const Groups: React.FC = () => {
     
     setIsOfficialEditLoading(true);
     try {
-      // Ensure all required fields are present for GroupOfficialRequest
-      const officialData: GroupOfficialRequest = {
-        name: values.name || "",
-        phoneNumber: values.phoneNumber || "",
-        email: values.email || "",
-        role: values.role || "",
-        groupId: selectedOfficial.group?.groupId || 0
-      };
-      
-      await groupService.updateGroupOfficial(selectedOfficial.id, officialData);
+      await groupService.updateGroupOfficial(selectedOfficial.id, values);
       toast({
         title: "Success",
         description: "Official updated successfully.",
@@ -532,72 +514,34 @@ const Groups: React.FC = () => {
     }
   };
 
-  // Add a direct event handler to debug form submission issues
-  const handleUpdateClick = () => {
-    console.log('Update button was clicked directly');
-    console.log('Current form values:', groupForm.getValues());
-    console.log('Form state:', groupForm.formState);
-    console.log('Is form valid?', groupForm.formState.isValid);
-    console.log('Form errors:', groupForm.formState.errors);
-  };
-
   const onSubmitEdit = async (values: GroupFormValues) => {
-    console.log('🔵 onSubmitEdit FUNCTION CALLED!');
-    console.log('📝 Form values received:', values);
+    if (!selectedGroup) return;
     
-    if (!selectedGroup) {
-      console.error('❌ No selected group found!');
-      return;
-    }
-    
-    console.log('✅ Selected group exists:', selectedGroup.groupId);
     setIsEditLoading(true);
-    
     try {
-      // Log all relevant context
-      console.log('💼 Current form state:', groupForm.formState);
-      console.log('📋 Full form values:', groupForm.getValues());
-      
       // Ensure all required fields are present
+      // Keep groupType and registrationNumber from the selectedGroup since they're not in the edit form
       const groupData: GroupRequest = {
         groupName: values.groupName || "",
-        // Preserve existing values for fields that are not in the edit form
+        // Preserve existing values for fields that are not in the form
         groupType: selectedGroup.groupType || "", 
         registrationNumber: selectedGroup.registrationNumber || "",
         phoneNumber: values.phoneNumber || "",
         email: values.email || "",
         physicalAddress: values.physicalAddress || ""
+        // Officials removed as they are no longer part of GroupRequest
       };
       
-      console.log('⚙️ Preparing API call to update group:', selectedGroup.groupId);
-      console.log('📦 Update payload:', JSON.stringify(groupData));
-      
-      // Call the update service with a timeout to make sure we catch any issues
-      const timeoutId = setTimeout(() => {
-        console.log('⚠️ Update operation taking longer than expected...');
-      }, 3000);
-      
-      try {
-        const updatedGroup = await groupService.updateGroup(selectedGroup.groupId, groupData);
-        clearTimeout(timeoutId);
-        console.log('🎉 Update successful! Response:', updatedGroup);
-        
-        toast({
-          title: "Success",
-          description: "Group has been updated successfully.",
-          variant: "default",
-        });
-        refetch();
-        setShowEditForm(false);
-      } catch (innerError) {
-        clearTimeout(timeoutId);
-        throw innerError; // Re-throw to be caught by outer catch
-      }
-      
+      await groupService.updateGroup(selectedGroup.groupId, groupData);
+      toast({
+        title: "Success",
+        description: "Group has been updated successfully.",
+        variant: "default",
+      });
+      refetch();
+      setShowEditForm(false);
     } catch (error) {
-      console.error("❌ Failed to update group:", error);
-      console.error("Error details:", JSON.stringify(error));
-      
+      console.error("Failed to update group:", error);
       toast({
         title: "Error",
         description: "Failed to update group. Please try again.",
@@ -605,7 +549,6 @@ const Groups: React.FC = () => {
       });
     } finally {
       setIsEditLoading(false);
-      console.log('🏁 Update operation completed (success or failure)');
     }
   };
 
@@ -649,21 +592,14 @@ const Groups: React.FC = () => {
     if (!selectedGroup) return;
     
     try {
-      // Debug the values coming from the form
-      console.log('Suspension form values:', values);
-      
-      // Create a very simple payload with ONLY the reason field
-      // According to the API docs, this is what the endpoint expects
+      // Make sure we're passing just the reason as required by the API
       const suspensionData: GroupSuspensionRequest = {
-        reason: values.reason
-        // Removing suspendedUntil since it's not in the API docs for this endpoint
+        reason: values.reason,
+        // Only include suspendedUntil if it has a value
+        ...(values.suspendedUntil ? { suspendedUntil: values.suspendedUntil } : {})
       };
       
-      console.log(`Attempting to suspend group ${selectedGroup.groupId} with reason: ${values.reason}`);
-      
-      // Call the service function
       await groupService.suspendGroup(selectedGroup.groupId, suspensionData);
-      
       toast({
         title: "Success",
         description: "Group has been suspended successfully.",
@@ -1047,14 +983,7 @@ const Groups: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...groupForm}>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                console.log('🔔 Form submission event triggered');
-                groupForm.handleSubmit(values => {
-                  console.log('📋 Form values being submitted:', values);
-                  onSubmitEdit(values);
-                })();
-              }} className="space-y-4">
+              <form onSubmit={groupForm.handleSubmit(onSubmitEdit)} className="space-y-4">
                 {/* Same form fields as Add Group form */}
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -1070,7 +999,6 @@ const Groups: React.FC = () => {
                       </FormItem>
                     )}
                   />
-                  
                   <FormField
                     control={groupForm.control}
                     name="groupType"
@@ -1084,21 +1012,21 @@ const Groups: React.FC = () => {
                       </FormItem>
                     )}
                   />
-</div>
-<div className="grid grid-cols-2 gap-4">
-<FormField
-  control={groupForm.control}
-  name="registrationNumber"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Registration Number</FormLabel>
-      <FormControl>
-        <Input {...field} placeholder="Enter registration number" readOnly />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={groupForm.control}
+                    name="registrationNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Registration Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter registration number" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={groupForm.control}
                     name="phoneNumber"
@@ -1151,17 +1079,7 @@ const Groups: React.FC = () => {
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isEditLoading}
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent default form submission
-                      console.log('Update button clicked directly');
-                      handleUpdateClick();
-                      // Manually trigger the form submission handler
-                      groupForm.handleSubmit(onSubmitEdit)();
-                    }}
-                  >
+                  <Button type="submit" disabled={isEditLoading}>
                     {isEditLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
