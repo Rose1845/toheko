@@ -13,6 +13,36 @@ export interface AcknowledgementResponseObject {
   object?: any;
 }
 
+// Generic Paginated Response Interfaces
+export interface Sort {
+  empty: boolean;
+  sorted: boolean;
+  unsorted: boolean;
+}
+
+export interface Pageable {
+  offset: number;
+  sort: Sort;
+  pageNumber: number;
+  pageSize: number;
+  paged: boolean;
+  unpaged: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  content: T[];
+  number: number;
+  sort: Sort;
+  pageable: Pageable;
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
+  empty: boolean;
+}
+
 export interface AuthenticationRequest {
   username: string;
   password: string;
@@ -185,18 +215,64 @@ export interface LoanApprovalRequest {
   comments?: string;
 }
 
-export interface Account {
-  id: number;
-  accountNumber: string;
+// Common base interface for entities with audit fields
+export interface BaseEntityAudit {
+  createDate?: string;
+  lastModified?: string | null;
+  createdBy?: string | number | null;
+  lastModifiedBy?: string | number | null;
+  version?: number;
+}
+
+export interface AccountType extends BaseEntityAudit {
+  accountTypeId: number;
+  name: string;
+  description: string;
+  shortDescription: string;
+  activationFee: number;
+}
+
+export interface Member {
+  createdAt: string;
+  updatedAt: string;
+  version: number;
   memberId: number;
-  accountType: string;
-  balance: number;
+  firstName: string;
+  lastName: string;
+  otherNames: string | null;
+  position: string | null;
+  memberNo: string;
+  nationalId: string;
+  gender: string | null;
+  address: string;
+  email: string;
+  phoneNumber: string;
+  dob: string | null;
+  hashedPhoneNumber: string;
   status: string;
-  dateCreated: string;
+  suspensionReason: string | null;
+  suspendedAt: string | null;
+  reactivatedAt: string | null;
+}
+
+export interface Account extends BaseEntityAudit {
+  accountId: number;
+  accountNumber: string;
+  name: string;
+  shortDescription: string;
+  suspensionReason: string | null;
+  suspendedAt: string | null;
+  reactivatedAt: string | null;
+  status: string;
+  balance: number;
+  paidActivationFee: boolean | null;
+  accountType: AccountType;
+  member: Member;
 }
 
 export interface AccountUpdateDTO {
-  accountType: string;
+  name: string;
+  shortDescription: string;
   status: string;
 }
 
@@ -206,24 +282,20 @@ export interface AccountSuspensionRequest {
 }
 
 // Group interfaces
-export interface Group {
-  createDate: string;
-  lastModified: string;
-  createdBy: number;
-  lastModifiedBy: number;
-  version: number;
+export interface Group extends BaseEntityAudit {
   groupId: number;
   groupName: string;
+  groupCode: string;
   groupType: string;
   registrationNumber: string;
   phoneNumber: string;
   email: string;
   physicalAddress: string;
   status: string;
-  approvedAt: string;
-  suspensionReason: string;
-  suspendedAt: string;
-  reactivatedAt: string;
+  approvedAt?: string | null;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
+  reactivatedAt?: string | null;
 }
 
 export interface GroupRequest {
@@ -233,31 +305,28 @@ export interface GroupRequest {
   phoneNumber: string;
   email: string;
   physicalAddress: string;
-  officials: GroupOfficial[];
+  // officials array removed as they are handled separately
 }
 
-export interface GroupOfficial {
-  id?: number;
-  createDate?: string;
-  lastModified?: string;
-  createdBy?: number;
-  lastModifiedBy?: number;
-  version?: number;
+export interface GroupOfficial extends BaseEntityAudit {
+  id: number; // official's unique ID
+  name: string;
+  description: string;
+  groupCode: string; // parent group's code
+  groupOfficialCode: string; // official's own code
+  email: string;
+  phoneNumber: string;
+  role: string;
+  group: Group; // Nested parent group details
+}
+
+export interface GroupOfficialRequest {
   name: string;
   phoneNumber: string;
   email: string;
   role: string;
-  groupId?: number;
-  group?: {
-    groupId: number;
-    groupName: string;
-    groupType: string;
-    registrationNumber: string;
-    phoneNumber: string;
-    email: string;
-    physicalAddress: string;
-    status: string;
-  };
+  groupId: number; // ID of the group this official belongs to
+  // description is not part of create/update request based on API docs
 }
 
 export interface GroupSuspensionRequest {

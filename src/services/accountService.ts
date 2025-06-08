@@ -7,7 +7,21 @@ import {
   AcknowledgementResponse 
 } from '../types/api';
 
+// Interface for creating a new account
+export interface CreateAccountRequest {
+  memberId: number;
+  accountTypeId: number;
+  name: string;
+  shortDescription: string;
+  initialBalance: number;
+}
+
 export const accountService = {
+  createAccount: async (accountData: CreateAccountRequest): Promise<AcknowledgementResponse> => {
+    const response = await apiClient.post('/api/v1/accounts', accountData);
+    return response.data;
+  },
+
   getAllAccounts: async (): Promise<Account[]> => {
     const response = await apiClient.get('/api/v1/accounts');
     return response.data.content;
