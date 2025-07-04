@@ -29,7 +29,7 @@ import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
 import axios from "axios";
 import { Column, DataTable } from "@/components/ui/data-table";
-import { Loader2, PiggyBank } from "lucide-react";
+import { Loader2, PiggyBank, Plus } from "lucide-react";
 import ApproveAndGenerateRepayment from "./ApproveAndGenerateRepayment";
 import LoanApplicationForm from "./loans/LoanApplication";
 
@@ -140,7 +140,7 @@ const Loans = () => {
 
     try {
       const params = {
-        loanId: loan.id as unknown as string,
+        loanId: loan.loanApplicationId as unknown as string,
         loanAmount: loan.amount,
         interestRate: Number(12), // Fixed interest rate as 12
         termInMonths: loan.termDays,
@@ -175,7 +175,7 @@ const Loans = () => {
   const columns: Column<LoanApplication>[] = [
     {
       header: "ID",
-      accessorKey: "id",
+      accessorKey: "loanApplicationId",
       sortable: true,
     },
     {
@@ -226,58 +226,83 @@ const Loans = () => {
     //     </span>
     //   ),
     // },
-    {
-      header: "Actions",
-      accessorKey: "id",
-      cell: (loan) => (
-        <div className="flex space-x-2 justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewDetails(loan)}
-          >
-            View
-          </Button>
+    // {
+    //   header: "Actions",
+    //   accessorKey: "loanApplicationId",
+    //   cell: (loan) => (
+    //     <div className="flex space-x-2 justify-end">
+    //       <Button
+    //         variant="ghost"
+    //         size="sm"
+    //         onClick={() => handleViewDetails(loan)}
+    //       >
+    //         View
+    //       </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setEditLoan(loan);
-              setShowForm(true);
-            }}
-          >
-            Edit
-          </Button>
+    //       <Button
+    //         variant="ghost"
+    //         size="sm"
+    //         onClick={() => {
+    //           setEditLoan(loan);
+    //           setShowForm(true);
+    //         }}
+    //       >
+    //         Edit
+    //       </Button>
 
-          {/* {loan.loanStatus === "Pending" && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleGenerateRepaymentSchedule(loan)}
-            >
-              Generate Repayment Schedule
-            </Button>
-          )}
+    //       {/* {loan.loanStatus === "Pending" && (
+    //         <Button
+    //           variant="secondary"
+    //           size="sm"
+    //           onClick={() => handleGenerateRepaymentSchedule(loan)}
+    //         >
+    //           Generate Repayment Schedule
+    //         </Button>
+    //       )}
 
-          {loan.loanStatus === "Pending" && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  Approve
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Loan Approval</DialogTitle>
-                </DialogHeader>
-                <ApproveAndGenerateRepayment loan={loan} approverId={1} />
-              </DialogContent>
-            </Dialog>
-          )} */}
-        </div>
-      ),
-    },
+    //       {loan.loanStatus === "Pending" && (
+    //         <Dialog open={open} onOpenChange={setOpen}>
+    //           <DialogTrigger asChild>
+    //             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+    //               Approve
+    //             </button>
+    //           </DialogTrigger>
+    //           <DialogContent className="max-w-2xl">
+    //             <DialogHeader>
+    //               <DialogTitle>Loan Approval</DialogTitle>
+    //             </DialogHeader>
+    //             <ApproveAndGenerateRepayment loan={loan} approverId={1} />
+    //           </DialogContent>
+    //         </Dialog>
+    //       )} */}
+    //     </div>
+    //   ),
+    // },
+ {
+    header: "Actions",
+    accessorKey: "loanApplicationId",
+    cell: (loan) => (
+      <div className="flex space-x-2 justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleViewDetails(loan)}
+        >
+          View
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setEditLoan(loan);
+            setShowForm(true);
+          }}
+        >
+          Edit
+        </Button>
+      </div>
+    ),
+  },
   ];
 
   const loantypescolumns: Column<LoanProduct>[] = [
@@ -357,7 +382,17 @@ const Loans = () => {
         </div>
 
         <div className="flex justify-end mb-4">
-          <LoanApplicationForm />
+               <div className="text-center mt-10">
+                    <Button 
+                      onClick={() => setShowForm(true)} 
+                      size="lg"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      Start New Loan Application
+                    </Button>
+                  </div>
+          <LoanApplicationForm  showForm={showForm} setShowForm={setShowForm} editLoan={editLoan}  />
         </div>
 
         <Tabs
