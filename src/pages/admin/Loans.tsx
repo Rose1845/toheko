@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
 import { loanService } from "@/services/loanService";
 import { LoanApplication, LoanProduct, LoanType } from "@/types/api";
+import { format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -201,6 +202,14 @@ const Loans = () => {
         <span className="font-medium">{loan?.loanApplicationCode}</span>
       ),
     },
+        {
+      header: "Amount",
+      accessorKey: "amount",
+      sortable: true,
+      cell: (loan) => (
+        <span className="font-medium">{loan?.amount}</span>
+      ),
+    },
     {
       header: "termDays",
       accessorKey: "termDays",
@@ -208,24 +217,32 @@ const Loans = () => {
       cell: (loan) => <span>{loan?.termDays || "--"}</span>,
     },
 
-    // {
-    //   header: "Status",
-    //   accessorKey: "loanStatus",
-    //   sortable: true,
-    //   cell: (loan) => (
-    //     <span
-    //       className={`px-2 py-1 rounded-full text-xs ${
-    //         loan.loanStatus === "Pending"
-    //           ? "bg-green-100 text-green-800"
-    //           : loan.loanStatus === "COMPLETED"
-    //           ? "bg-blue-100 text-blue-800"
-    //           : "bg-red-100 text-red-800"
-    //       }`}
-    //     >
-    //       {loan?.loanStatus}
-    //     </span>
-    //   ),
-    // },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      cell: (loan) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            loan.status == "Pending"
+              ? "bg-green-100 text-green-800"
+              : loan.status == "COMPLETED"
+              ? "bg-blue-100 text-blue-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {loan?.status}
+        </span>
+      ),
+    },
+            {
+          header: "Created Date",
+          accessorKey: "createDate",
+          sortable: true,
+          cell: (loan) => (
+            <span>{format(new Date(loan.createDate), "dd/MM/yyyy")}</span>
+          ),
+        },
     // {
     //   header: "Actions",
     //   accessorKey: "loanApplicationId",

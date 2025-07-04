@@ -202,6 +202,7 @@ export interface LoanApplication {
   nextOfKin: LoanNextOfKin[];
   collateral: LoanCollateralItem[];
   loanApplicationCode?: string;
+  status?: string;
 };
 
 
