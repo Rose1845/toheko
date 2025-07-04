@@ -270,7 +270,7 @@ export default function DashboardSidebar() {
             <SidebarLink
               to="/admin/loan-products"
               icon={<CreditCard className="h-5 w-5" />}
-              label="Loan Product"
+              label="Loan Products"
               active={isActive("/admin/loan-products")}
               collapsed={collapsed}
             />

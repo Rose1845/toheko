@@ -32,7 +32,7 @@ const FormFooter: React.FC<FormFooterProps> = ({
   };
 
   return (
-    <div className="flex justify-between pt-4 border-t bg-white sticky bottom-0 z-10 px-6">
+        <div className="flex justify-between pt-4 border-t sticky bottom-0 z-10 px-6">
 
       {!editLoan && ( // Only show navigation in create mode
         <div className="flex gap-2">

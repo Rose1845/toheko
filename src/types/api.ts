@@ -201,6 +201,7 @@ export interface LoanApplication {
   guarantors: LoanGuarantor[];
   nextOfKin: LoanNextOfKin[];
   collateral: LoanCollateralItem[];
+  loanApplicationCode?: string;
 };
 
 

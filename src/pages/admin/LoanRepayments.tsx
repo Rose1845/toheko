@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -43,7 +43,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Repayment, 
@@ -57,19 +56,18 @@ import { loanService } from "@/services/loanService";
 import { memberService } from "@/services/memberService";
 import { DatePicker } from "@/components/ui/date-picker";
 
-// Zod schema for Repayment form
 const repaymentSchema = z.object({
   loanId: z.coerce.number().min(1, "Loan is required"),
   amount: z.coerce.number().min(1, "Amount is required"),
   principalAmount: z.coerce.number().min(0, "Principal amount is required"),
   interestAmount: z.coerce.number().min(0, "Interest amount is required"),
+  penaltyAmount: z.coerce.number().min(0).optional().default(0),
   dueDate: z.date({
     required_error: "Due date is required",
   }),
   remarks: z.string().optional(),
 });
 
-// Zod schema for Record Payment form
 const recordPaymentSchema = z.object({
   id: z.coerce.number(),
   amount: z.coerce.number().min(1, "Amount is required"),
@@ -79,7 +77,6 @@ const recordPaymentSchema = z.object({
   remarks: z.string().optional(),
 });
 
-// Zod schema for Waive/Cancel form
 const actionSchema = z.object({
   id: z.coerce.number(),
   remarks: z.string().min(1, "Remarks are required"),
@@ -90,40 +87,29 @@ type RecordPaymentFormValues = z.infer<typeof recordPaymentSchema>;
 type ActionFormValues = z.infer<typeof actionSchema>;
 
 const LoanRepayments = () => {
-  // State variables
   const [showForm, setShowForm] = useState(false);
   const [showRecordPaymentForm, setShowRecordPaymentForm] = useState(false);
   const [showWaiveForm, setShowWaiveForm] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedRepayment, setSelectedRepayment] = useState<Repayment | null>(null);
   const { toast } = useToast();
 
-  // Query to fetch all repayments
-  const {
-    data: repayments,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data: repayments, isLoading, error, refetch } = useQuery({
     queryKey: ["repayments"],
     queryFn: () => repaymentService.getAllRepayments(),
   });
 
-  // Query to fetch all loans for dropdown
   const { data: loans } = useQuery({
     queryKey: ["loans"],
     queryFn: loanService.getAllLoanApplications,
   });
 
-  // Query to fetch all staff members for dropdown
   const { data: members } = useQuery({
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
 
-  // Forms
   const repaymentForm = useForm<RepaymentFormValues>({
     resolver: zodResolver(repaymentSchema),
     defaultValues: {
@@ -131,6 +117,7 @@ const LoanRepayments = () => {
       amount: 0,
       principalAmount: 0,
       interestAmount: 0,
+      penaltyAmount: 0,
       remarks: "",
     },
   });
@@ -163,32 +150,30 @@ const LoanRepayments = () => {
     },
   });
 
-  // Handlers
   const handleAddNew = () => {
     repaymentForm.reset({
       loanId: 0,
       amount: 0,
       principalAmount: 0,
       interestAmount: 0,
+      penaltyAmount: 0,
       remarks: "",
     });
-    setIsEditing(false);
+    setSelectedRepayment(null);
     setShowForm(true);
   };
 
   const handleEdit = (repayment: Repayment) => {
-    const dueDate = new Date(repayment.dueDate);
-    
     repaymentForm.reset({
       loanId: repayment.loanId,
       amount: repayment.amount,
       principalAmount: repayment.principalAmount,
       interestAmount: repayment.interestAmount,
-      dueDate: dueDate,
-      remarks: repayment.remarks,
+      penaltyAmount: repayment.penaltyAmount || 0,
+      dueDate: new Date(repayment.dueDate),
+      remarks: repayment.remarks || "",
     });
     setSelectedRepayment(repayment);
-    setIsEditing(true);
     setShowForm(true);
   };
 
@@ -251,15 +236,16 @@ const LoanRepayments = () => {
     }
   };
 
-  // Form submission handlers
   const onSubmitRepayment = async (values: RepaymentFormValues) => {
     try {
       const repaymentData: RepaymentRequest = {
         ...values,
         dueDate: format(values.dueDate, "yyyy-MM-dd"),
+        status: "PENDING",
+        isActive: true,
       };
 
-      if (isEditing && selectedRepayment) {
+      if (selectedRepayment) {
         await repaymentService.updateRepayment(selectedRepayment.id, repaymentData);
         toast({
           title: "Success",
@@ -274,13 +260,12 @@ const LoanRepayments = () => {
       }
 
       setShowForm(false);
-      repaymentForm.reset();
       refetch();
     } catch (error) {
       console.error("Error saving repayment:", error);
       toast({
         title: "Error",
-        description: isEditing
+        description: selectedRepayment
           ? "Failed to update repayment"
           : "Failed to create repayment",
         variant: "destructive",
@@ -301,7 +286,6 @@ const LoanRepayments = () => {
       });
 
       setShowRecordPaymentForm(false);
-      recordPaymentForm.reset();
       refetch();
     } catch (error) {
       console.error("Error recording payment:", error);
@@ -326,7 +310,6 @@ const LoanRepayments = () => {
       });
 
       setShowWaiveForm(false);
-      waiveForm.reset();
       refetch();
     } catch (error) {
       console.error("Error waiving repayment:", error);
@@ -351,7 +334,6 @@ const LoanRepayments = () => {
       });
 
       setShowCancelForm(false);
-      cancelForm.reset();
       refetch();
     } catch (error) {
       console.error("Error cancelling repayment:", error);
@@ -363,7 +345,6 @@ const LoanRepayments = () => {
     }
   };
 
-  // Helper functions
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case "PAID":
@@ -383,7 +364,6 @@ const LoanRepayments = () => {
     }
   };
 
-  // Define columns for DataTable
   const columns: Column<Repayment>[] = [
     {
       header: "ID",
@@ -404,11 +384,6 @@ const LoanRepayments = () => {
       sortable: true,
     },
     {
-      header: "Member",
-      accessorKey: "memberName",
-      sortable: true,
-    },
-    {
       header: "Amount",
       accessorKey: "amount",
       sortable: true,
@@ -419,9 +394,7 @@ const LoanRepayments = () => {
       accessorKey: "dueDate",
       sortable: true,
       cell: (repayment) => (
-        <span>
-          {format(new Date(repayment.dueDate), "dd/MM/yyyy")}
-        </span>
+        <span>{format(new Date(repayment.dueDate), "dd/MM/yyyy")}</span>
       ),
     },
     {
@@ -567,135 +540,134 @@ const LoanRepayments = () => {
           </CardContent>
         </Card>
 
-        {/* Add/Edit Repayment Form */}
+        {/* Add/Edit Repayment Dialog */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="sm:max-w-[600px] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {isEditing ? "Edit Repayment" : "Add New Repayment"}
+                {selectedRepayment ? "Edit Repayment" : "Add New Repayment"}
               </DialogTitle>
               <DialogDescription>
-                {isEditing
-                  ? "Update the repayment's information below."
-                  : "Add a new repayment by filling in the information below."}
+                {selectedRepayment
+                  ? "Update the repayment details below."
+                  : "Fill in the details to create a new repayment."}
               </DialogDescription>
             </DialogHeader>
             <Form {...repaymentForm}>
-              <form
-                onSubmit={repaymentForm.handleSubmit(onSubmitRepayment)}
-                className="space-y-4 overflow-y-auto pr-2"
-              >
-                <Tabs defaultValue="basic" className="w-full">
-                  <TabsList className="grid grid-cols-2 gap-2">
-                    <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="basic" className="space-y-4 pt-4">
-                    <FormField
-                      control={repaymentForm.control}
-                      name="loanId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Loan</FormLabel>
+              <form onSubmit={repaymentForm.handleSubmit(onSubmitRepayment)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={repaymentForm.control}
+                    name="loanId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Loan</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value.toString()}>
                           <FormControl>
-                            <Select
-                              onValueChange={(value) =>
-                                field.onChange(parseInt(value))
-                              }
-                              defaultValue={field.value.toString()}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select loan" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {loans?.map((loan: any) => (
-                                  <SelectItem key={loan.id} value={loan.id.toString()}>
-                                    {loan.loanApplicationCode} - {loan.loanAmount}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select loan" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                          <SelectContent>
+                            {loans?.map((loan) => (
+                              <SelectItem key={loan.loanApplicationId} value={loan.loanApplicationId.toString()}>
+                                {loan.loanApplicationCode} - Ksh {loan.amount.toLocaleString()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={repaymentForm.control}
-                      name="amount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Total Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={repaymentForm.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Amount</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={repaymentForm.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Due Date</FormLabel>
-                          <DatePicker
-                            selected={field.value}
-                            onSelect={field.onChange}
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </TabsContent>
-                  <TabsContent value="details" className="space-y-4 pt-4">
-                    <FormField
-                      control={repaymentForm.control}
-                      name="principalAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Principal Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={repaymentForm.control}
+                    name="principalAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Principal Amount</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={repaymentForm.control}
-                      name="interestAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Interest Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={repaymentForm.control}
+                    name="interestAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Interest Amount</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={repaymentForm.control}
-                      name="remarks"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Remarks</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </TabsContent>
-                </Tabs>
+                  <FormField
+                    control={repaymentForm.control}
+                    name="penaltyAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Penalty Amount</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <DialogFooter className="pt-4">
+                  <FormField
+                    control={repaymentForm.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <DatePicker
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={repaymentForm.control}
+                    name="remarks"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Remarks</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <DialogFooter>
                   <Button
                     variant="outline"
                     type="button"
@@ -703,14 +675,16 @@ const LoanRepayments = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">{isEditing ? "Update" : "Add"}</Button>
+                  <Button type="submit">
+                    {selectedRepayment ? "Update" : "Create"}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
 
-        {/* Record Payment Form */}
+        {/* Record Payment Dialog */}
         <Dialog open={showRecordPaymentForm} onOpenChange={setShowRecordPaymentForm}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -720,10 +694,7 @@ const LoanRepayments = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...recordPaymentForm}>
-              <form
-                onSubmit={recordPaymentForm.handleSubmit(onSubmitRecordPayment)}
-                className="space-y-4"
-              >
+              <form onSubmit={recordPaymentForm.handleSubmit(onSubmitRecordPayment)} className="space-y-4">
                 <FormField
                   control={recordPaymentForm.control}
                   name="amount"
@@ -758,22 +729,19 @@ const LoanRepayments = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Payment Method</FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select payment method" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CASH">Cash</SelectItem>
-                            <SelectItem value="MOBILE_MONEY">Mobile Money</SelectItem>
-                            <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                            <SelectItem value="CHECK">Check</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CASH">Cash</SelectItem>
+                          <SelectItem value="MOBILE_MONEY">Mobile Money</SelectItem>
+                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                          <SelectItem value="CHECK">Check</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -785,25 +753,20 @@ const LoanRepayments = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Received By</FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
-                          defaultValue={field.value.toString()}
-                        >
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
+                        <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select staff member" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {members?.map((member: any) => (
-                              <SelectItem key={member.memberId} value={member.memberId.toString()}>
-                                {member.firstName} {member.lastName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
+                        </FormControl>
+                        <SelectContent>
+                          {members?.map((member) => (
+                            <SelectItem key={member.memberId} value={member.memberId.toString()}>
+                              {member.firstName} {member.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -838,7 +801,7 @@ const LoanRepayments = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Waive Form */}
+        {/* Waive Dialog */}
         <Dialog open={showWaiveForm} onOpenChange={setShowWaiveForm}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -848,10 +811,7 @@ const LoanRepayments = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...waiveForm}>
-              <form
-                onSubmit={waiveForm.handleSubmit(onSubmitWaive)}
-                className="space-y-4"
-              >
+              <form onSubmit={waiveForm.handleSubmit(onSubmitWaive)} className="space-y-4">
                 <FormField
                   control={waiveForm.control}
                   name="remarks"
@@ -881,7 +841,7 @@ const LoanRepayments = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Cancel Form */}
+        {/* Cancel Dialog */}
         <Dialog open={showCancelForm} onOpenChange={setShowCancelForm}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -891,10 +851,7 @@ const LoanRepayments = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...cancelForm}>
-              <form
-                onSubmit={cancelForm.handleSubmit(onSubmitCancel)}
-                className="space-y-4"
-              >
+              <form onSubmit={cancelForm.handleSubmit(onSubmitCancel)} className="space-y-4">
                 <FormField
                   control={cancelForm.control}
                   name="remarks"
@@ -935,7 +892,7 @@ const LoanRepayments = () => {
                 Are you sure you want to delete this repayment? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="mt-4">
+            <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteDialog(false)}

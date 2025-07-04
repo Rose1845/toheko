@@ -979,8 +979,11 @@ const Disbursements = () => {
                         </FormControl>
                         <SelectContent>
                           {loanApplications.map((loan) => (
-                            <SelectItem key={loan.id} value={loan.id.toString()}>
-                              {loan.loanApplicationCode || `Loan #${loan.id}`}
+                            // <SelectItem key={loan.loanApplicationId} value={loan.loanApplicationId}>
+                            //   {loan.loanApplicationCode || `Loan #${loan.loanApplicationId}`}
+                            // </SelectItem>
+                            <SelectItem key={loan.loanApplicationId} value={loan.loanApplicationId}>
+                              {loan.loanApplicationCode || `Loan #${loan.loanApplicationId}`}
                             </SelectItem>
                           ))}
                         </SelectContent>

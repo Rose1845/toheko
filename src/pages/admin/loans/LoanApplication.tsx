@@ -382,7 +382,7 @@ const LoanApplicationForm: React.FC<LoanApplicationFormProps> = ({ showForm, set
           {/* <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden"> */}
           <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300">
 
-            <DialogHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white -mx-6 -mt-6 px-6 py-4">
+            <DialogHeader className="bg-gradient-to-r from-blue-600 to-blue-400 text-white -mx-6 -mt-6 px-6 py-4">
               <DialogTitle className="text-xl flex items-center gap-2">
                 {/* New Loan Application */}
                 {editLoan ? "Edit Loan Application" : "New Loan Application"}

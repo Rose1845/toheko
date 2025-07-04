@@ -8,7 +8,7 @@ interface BasicInfoTabProps {
   control: Control<any>;
   currentTab: string;
   watch: any;
-  loanProducts?: Array<{ id: number; name: string; rate: string }>;
+  loanProducts?: Array<{ id: number; name: string; interestRate: string }>;
   members?: Array<{ memberId: number; firstName: string; lastName: string; idNo: string }>;
   isLoadingLoanProducts?: boolean;
   isLoadingMembers?: boolean;
@@ -60,7 +60,7 @@ const BasicInfoTab = ({
                       <SelectContent>
                         {loanProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} ({product.rate})
+                            {product.name} - {product.interestRate}% Interest
                           </SelectItem>
                         ))}
                       </SelectContent>

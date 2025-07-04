@@ -193,19 +193,19 @@ const Loans = () => {
         );
       },
     },
-    // {
-    //   header: "loanApplicationCode",
-    //   accessorKey: "loanApplicationCode",
-    //   sortable: true,
-    //   cell: (loan) => (
-    //     <span className="font-medium">{loan?.}</span>
-    //   ),
-    // },
+    {
+      header: "loanApplicationCode",
+      accessorKey: "loanApplicationCode",
+      sortable: true,
+      cell: (loan) => (
+        <span className="font-medium">{loan?.loanApplicationCode}</span>
+      ),
+    },
     {
       header: "termDays",
       accessorKey: "termDays",
       sortable: true,
-      cell: (loan) => <span>{loan?.termDays}</span>,
+      cell: (loan) => <span>{loan?.termDays || "--"}</span>,
     },
 
     // {
@@ -282,7 +282,7 @@ const Loans = () => {
     header: "Actions",
     accessorKey: "loanApplicationId",
     cell: (loan) => (
-      <div className="flex space-x-2 justify-end">
+      <div className="">
         <Button
           variant="ghost"
           size="sm"
@@ -382,11 +382,11 @@ const Loans = () => {
         </div>
 
         <div className="flex justify-end mb-4">
-               <div className="text-center mt-10">
+               <div className="text-center mt-5">
                     <Button 
                       onClick={() => setShowForm(true)} 
                       size="lg"
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      // className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                     >
                       <Plus className="mr-2 h-5 w-5" />
                       Start New Loan Application
@@ -395,18 +395,8 @@ const Loans = () => {
           <LoanApplicationForm  showForm={showForm} setShowForm={setShowForm} editLoan={editLoan}  />
         </div>
 
-        <Tabs
-          defaultValue="applications"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full mb-6"
-        >
-          <TabsList>
-            <TabsTrigger value="applications">Loan Applications</TabsTrigger>
-            <TabsTrigger value="types">Loan Products</TabsTrigger>
-          </TabsList>
 
-          <TabsContent value="applications">
+
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Loan Applications</CardTitle>
@@ -431,7 +421,7 @@ const Loans = () => {
                   <DataTable
                     data={loans}
                     columns={columns}
-                    keyField="id"
+                    keyField="loanApplicationId"
                     pagination={true}
                     searchable={true}
                     pageSize={10}
@@ -443,44 +433,7 @@ const Loans = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="types">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Loan Products</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading products...</span>
-                  </div>
-                ) : loanTypes?.length === 0 ? (
-                  <div className="text-center py-10">
-                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">
-                      No products found
-                    </h3>
-                  </div>
-                ) : (
-                  <DataTable
-                    data={loanTypes}
-                    columns={loantypescolumns}
-                    keyField="id"
-                    pagination={true}
-                    searchable={true}
-                    pageSize={10}
-                    pageSizeOptions={[5, 10, 25, 50]}
-                    emptyMessage="No loanTypes found"
-                    loading={loading}
-                    // onRowClick={(loan) => handleEdit(saving)}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      
 
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent className="sm:max-w-[600px]">
@@ -495,7 +448,7 @@ const Loans = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-500">Loan ID</h3>
-                    <p>{selectedLoan.id}</p>
+                    <p>{selectedLoan.loanApplicationId}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Member ID</h3>
