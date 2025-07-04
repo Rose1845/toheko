@@ -60,8 +60,8 @@ export interface RegisterRequest {
 }
 
 export interface AuthenticationResponse {
-  token: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
   expiresIn: number;
   userId: number;
   roles: string[];

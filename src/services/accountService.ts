@@ -50,5 +50,11 @@ export const accountService = {
   activateSuspendedAccount: async (accountId: number): Promise<AcknowledgementResponse> => {
     const response = await apiClient.put(`/api/v1/accounts/${accountId}/activate-suspend`);
     return response.data;
+  },
+
+  // Get accounts for a specific member
+  getMemberAccounts: async (memberId: number): Promise<Account[]> => {
+    const response = await apiClient.get(`/api/v1/accounts/member/${memberId}`);
+    return response.data.content || response.data;
   }
 };
