@@ -51,18 +51,30 @@ const SidebarSubmenu = ({
   label,
   collapsed,
   children,
+  paths = [],
 }: {
   icon: React.ReactNode;
   label: string;
   collapsed: boolean;
   children: React.ReactNode;
+  paths?: string[]; // Add this prop to define active paths
 }) => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Automatically open if current path matches any of the submenu paths
+  useEffect(() => {
+    if (paths.some((path) => location.pathname.startsWith(path))) {
+      setIsOpen(true);
+    }
+  }, [location.pathname, paths]);
+
+  const toggle = () => setIsOpen((prev) => !prev);
 
   return (
     <div className="space-y-1">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className={`w-full flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors
                    text-muted-foreground hover:bg-muted hover:text-foreground`}
       >
@@ -87,6 +99,7 @@ const SidebarSubmenu = ({
     </div>
   );
 };
+
 
 export default function DashboardSidebar() {
   const location = useLocation();
@@ -237,6 +250,15 @@ export default function DashboardSidebar() {
             icon={<CreditCard className="h-5 w-5" />}
             label="Loans"
             collapsed={collapsed}
+            paths={[
+              "/admin/loans",
+              "/admin/loan-products",
+              "/admin/loan-penalties",
+              "/admin/loan-collaterals",
+              "/admin/loan-repayments",
+              "/admin/loan-schedules",
+              "/admin/loan-disbursements",
+            ]}
           >
             <SidebarLink
               to="/admin/loans"
@@ -256,7 +278,7 @@ export default function DashboardSidebar() {
               to="/admin/loan-penalties"
               icon={<CreditCard className="h-5 w-5" />}
               label="Penalty"
-              active={isActive("/admin/loan-pemalties")}
+              active={isActive("/admin/loan-penalties")}
               collapsed={collapsed}
             />
             <SidebarLink
@@ -315,6 +337,11 @@ export default function DashboardSidebar() {
             icon={<Receipt className="h-5 w-5" />}
             label="Payments"
             collapsed={collapsed}
+            paths={[
+              "/admin/payments",
+              "/admin/payment-types",
+              "/admin/payment-modes",
+            ]}
           >
             <SidebarLink
               to="/admin/payments"
