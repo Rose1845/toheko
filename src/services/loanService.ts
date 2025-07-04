@@ -123,7 +123,7 @@ export const loanService = {
   // Loan Applications
   getAllLoanApplications: async (): Promise<LoanApplication[]> => {
     try {
-      const response = await apiClient.get('/api/v1/loan-applications?page=0&size=100&sort=id,desc');
+      const response = await apiClient.get('/api/v1/loan-applications/get-all?page=0&size=100');
       
       // Check if we have the expected data structure
       if (response.data && response.data.data && response.data.data.content) {
@@ -154,7 +154,7 @@ export const loanService = {
     return response.data;
   },
 
-  updateLoanApplication: async (application: LoanApplicationRequest): Promise<AcknowledgementResponse> => {
+  updateLoanApplication: async (application: LoanApplication): Promise<AcknowledgementResponse> => {
     const response = await apiClient.put('/api/v1/loans/updated', application);
     return response.data;
   },
@@ -164,14 +164,49 @@ export const loanService = {
     return response.data;
   },
 
-  updateLoanCollateral: async (application: LoanCollateralItem): Promise<AcknowledgementResponse> => {
-    const response = await apiClient.put('/api/v1/loan-collaterals/update', application);
-    return response.data;
-  },
-
   // Loan Approvals
   updateLoanApproval: async (approval: LoanApprovalRequest): Promise<AcknowledgementResponse> => {
     const response = await apiClient.put('/api/v1/loan-approvals/updated', approval);
     return response.data;
+  },
+
+  // In loanService.ts
+ updateLoanGuarantors: async (loanApplicationId: number, guarantors: any[]) => {
+  const response = await apiClient.put(
+    `/loan-applications/guarantors`,
+    { guarantors }
+  );
+  return response.data;
+},
+
+  updateLoanCollateral: async (loanApplicationId: number, collateral: any[]): Promise<AcknowledgementResponse> => {
+    const response = await apiClient.put('/api/v1/loan-collaterals/update', collateral);
+    return response.data;
+  },
+
+ updateLoanNextOfKin: async (loanApplicationId: number, nextOfKin: any[]) => {
+  const response = await apiClient.put(
+    `/loan-applications/next-of-kin`,
+    { nextOfKin }
+  );
+  return response.data;
+},
+
+
+  getLoanNextOfKinByLoanId: async (loanId: number): Promise<LoanNextOfKin[]> => {
+    const response = await apiClient.get(`/api/v1/loan-next-of-kin?loanId=${loanId}`);
+    return response.data.data.content;
+  },
+
+  getLoanCollateralByLoanId: async (loanId: number): Promise<LoanCollateralItem[]> => {
+    const response = await apiClient.get(`/api/v1/loan-collaterals?loanId=${loanId}`);
+    return response.data.data.content;
+  },
+
+  getLoanGuarantors: async (loanId: number): Promise<LoanGuarantor[]> => {
+    const response = await apiClient.get(`/api/v1/loan-guarantors/getAll?loanId=${loanId}`);
+    return response.data.data.content;
   }
+
+  
 };

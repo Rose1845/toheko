@@ -191,9 +191,9 @@ export interface LoanNextOfKin {
 
 
 export interface LoanApplication {
-  id: number;
+  loanApplicationId: number;
   loanProductId: number;
-  applicantId: number;
+  applicantIdNo: number | string;
   memberId: number;
   name: string;
   amount: number;
@@ -201,6 +201,7 @@ export interface LoanApplication {
   guarantors: LoanGuarantor[];
   nextOfKin: LoanNextOfKin[];
   collateral: LoanCollateralItem[];
+  loanApplicationCode?: string;
 };
 
 
