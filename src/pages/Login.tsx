@@ -15,6 +15,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { authService } from "@/services/authService";
 import { toast } from "@/components/ui/sonner";
 import { z } from "zod";
+import { jwtDecode } from "jwt-decode";
+import { AuthenticationResponse } from "@/types/api";
+
+// Define a custom interface for our JWT payload
+interface TohekoJwtPayload {
+  sub: string;
+  role: string;
+  [key: string]: any; // Allow for other properties that might be in the token
+}
 
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email address"),
@@ -81,12 +90,66 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      await authService.login({
+      const response = await authService.login({
         username: formData.username,
         password: formData.password,
       });
+      
+      // Store the token in localStorage for authenticated requests
+      if (response.access_token) {
+        localStorage.setItem('token', response.access_token);
+      }
+      
       toast.success("Login successful!");
-      navigate("/admin/dashboard");
+      
+      // Check user role from JWT token and redirect accordingly
+      if (response.access_token) {
+        try {
+          // Decode the JWT token to extract user information
+          const decodedToken = jwtDecode<TohekoJwtPayload>(response.access_token);
+          console.log('Decoded JWT Token:', decodedToken);
+          
+          // Extract role from the token
+          const userRole = decodedToken.role || '';
+          console.log('User role from JWT:', userRole);
+          
+          // Check if the role contains 'member'
+          const isMember = userRole.toLowerCase().includes('member');
+          
+          if (isMember) {
+            // Redirect to user dashboard if the user is a member
+            navigate("/user/dashboard");
+          } else {
+            // Redirect to admin dashboard for other roles
+            navigate("/admin/dashboard");
+          }
+        } catch (jwtError) {
+          console.error('Error decoding JWT token:', jwtError);
+          // Fallback to using the response roles if JWT decoding fails
+          const userRoles = response.roles || [];
+          console.log('Fallback - User roles from response:', userRoles);
+          
+          const isMember = userRoles.some(role => role.toLowerCase().includes('member'));
+          
+          if (isMember) {
+            navigate("/user/dashboard");
+          } else {
+            navigate("/admin/dashboard");
+          }
+        }
+      } else {
+        // If no access_token in response, use the roles array as fallback
+        const userRoles = response.roles || [];
+        console.log('No access_token - Using roles from response:', userRoles);
+        
+        const isMember = userRoles.some(role => role.toLowerCase().includes('member'));
+        
+        if (isMember) {
+          navigate("/user/dashboard");
+        } else {
+          navigate("/admin/dashboard");
+        }
+      }
     } catch (error) {
       console.error("Login failed:", error);
       toast.error("Login failed. Please check your credentials and try again.");
