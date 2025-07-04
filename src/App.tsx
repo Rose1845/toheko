@@ -9,7 +9,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/admin/Dashboard";
 import Members from "./pages/admin/Members";
-import Loans from "./pages/admin/Loans";
+import AdminLoans from "./pages/admin/Loans";
 import Accounts from "./pages/admin/Accounts";
 import AccountTypes from "./pages/admin/AccountTypes";
 import Payments from "./pages/admin/Payments";
@@ -17,15 +17,6 @@ import PaymentTypes from "./pages/admin/PaymentTypes";
 import PaymentModes from "./pages/admin/PaymentModes";
 import NextOfKinManagement from "./pages/admin/NextOfKinManagement";
 import MemberManagement from "./pages/admin/MemberManagement";
-import Settings from "./pages/admin/Settings";
-import Notifications from "./pages/admin/Notifications";
-import NotFound from "./pages/NotFound";
-import Permissions from "./pages/admin/Permissions";
-import BoardMembers from "./pages/admin/BoardMembers";
-import Savings from "./pages/admin/Savings";
-import Roles from "./pages/admin/Roles";
-import RepaymentSchedules from "./pages/admin/RepaymentSchedules";
-import Repayments from "./pages/admin/Repayments";
 import Disbursements from "./pages/admin/Disbursements";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoanProducts from "./pages/admin/LoanProducts";
@@ -33,6 +24,25 @@ import LoanPenalties from "./pages/admin/LoanPenalties";
 import LoanCollateral from "./pages/admin/LoanCollateral";
 import LoanRepayments from "./pages/admin/LoanRepayments";
 import Groups from "./pages/admin/Groups";
+import Permissions from "./pages/admin/Permissions";
+import BoardMembers from "./pages/admin/BoardMembers";
+import Roles from "./pages/admin/Roles";
+import RepaymentSchedules from "./pages/admin/RepaymentSchedules";
+import Repayments from "./pages/admin/Repayments";
+import AdminSavings from "./pages/admin/Savings";
+import AdminSettings from "./pages/admin/Settings";
+import Notifications from "./pages/admin/Notifications";
+import NotFound from "./pages/NotFound";
+
+// User dashboard imports
+import UserDashboardLayout from "./pages/user/layout/UserDashboardLayout";
+import UserDashboard from "./pages/user/Dashboard";
+import UserPayments from "./pages/user/Payments";
+import UserLoans from "./pages/user/Loans";
+import UserSavings from "./pages/user/Savings";
+import UserStatements from "./pages/user/Statements";
+import UserProfile from "./pages/user/Profile";
+import UserSettings from "./pages/user/Settings";
 
 const queryClient = new QueryClient();
 
@@ -47,14 +57,26 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/user" element={<ProtectedRoute />}>
+            <Route path="dashboard" element={<UserDashboard />} />
+            <Route path="payments" element={<UserPayments />} />
+            <Route path="loans" element={<UserLoans />} />
+            <Route path="savings" element={<UserSavings />} />
+            <Route path="statements" element={<UserStatements />} />
+            <Route path="profile" element={<UserProfile />} />
+            <Route path="settings" element={<UserSettings />} />
+          </Route>
           <Route element={<ProtectedRoute />}>
+            {/* Admin routes */}
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            {/* User routes */}
+            <Route path="/user/payments" element={<UserPayments />} />
             <Route path="/admin/members" element={<Members />} />
             <Route
               path="/admin/member-management"
               element={<MemberManagement />}
             />
-            <Route path="/admin/loans" element={<Loans />} />
+            <Route path="/admin/loans" element={<AdminLoans />} />
             <Route path="/admin/loan-products" element={<LoanProducts />} />
             <Route path="/admin/loan-penalties" element={<LoanPenalties />} />
 
@@ -84,9 +106,9 @@ const App = () => (
             />
             <Route path="/admin/permissions" element={<Permissions />} />
             <Route path="/admin/board-members" element={<BoardMembers />} />
-            <Route path="/admin/savings" element={<Savings />} />
+            <Route path="/admin/savings" element={<AdminSavings />} />
             <Route path="/admin/roles" element={<Roles />} />
-            <Route path="/admin/settings" element={<Settings />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/notifications" element={<Notifications />} />
           </Route>
           <Route path="*" element={<NotFound />} />
