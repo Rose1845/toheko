@@ -43,6 +43,14 @@ export interface STKPushRequest {
   remarks: string;
   app: string;
   paymentReference: string;
+  memberId: number;
+}
+
+export interface STKPushResponse {
+  responseCode: string;
+  message: string;
+  timestamp: string;
+  checkoutRequestID?: string;
 }
 
 export interface PaymentResponse {
@@ -99,7 +107,7 @@ export const userPaymentService = {
   },
 
   // Initiate STK push for M-PESA payment
-  initiateSTKPush: async (stkData: STKPushRequest): Promise<any> => {
+  initiateSTKPush: async (stkData: STKPushRequest): Promise<STKPushResponse> => {
     try {
       const response = await apiClient.post('/api/v1/result/request/lipampesa', stkData);
       return response.data;

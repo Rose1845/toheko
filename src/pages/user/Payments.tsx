@@ -15,7 +15,8 @@ interface TohekoJwtPayload {
   sub: string;
   userId: number;
   role: string;
-  [key: string]: any;
+  exp?: number;
+  iat?: number;
 }
 
 
@@ -220,7 +221,8 @@ const Payments = () => {
           phoneNumber,
           remarks: remarks || 'Payment via member portal',
           app: 'toheko', // Always use "toheko" as the app name
-          paymentReference: paymentRequestId // Use the requestID from payment creation as paymentReference
+          paymentReference: paymentRequestId, // Use the requestID from payment creation as paymentReference
+          memberId: selectedAccount.member.memberId // Include the memberId from the selected account
         };
         
         // Initiate the STK push
