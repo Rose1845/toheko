@@ -3,6 +3,7 @@
 import { Interface } from "node:readline";
 
 export interface AcknowledgementResponse {
+  id?: number;
   success: boolean;
   message: string;
 }
@@ -203,6 +204,7 @@ export interface LoanApplication {
   collateral: LoanCollateralItem[];
   loanApplicationCode?: string;
   status?: string;
+  createDate?: string;
 };
 
 
@@ -387,6 +389,7 @@ export interface Payment {
   referenceNumber: string;
   phoneNumber: string;
   description?: string;
+  
 }
 
 export interface PaymentUpdateDTO {
@@ -430,6 +433,7 @@ export interface ModeOfPaymentDto {
 
 // Next of Kin
 export interface NextOfKin {
+  id?: number;
   nextOfKinId: number;
   memberId: number;
   member: Member;
@@ -474,6 +478,8 @@ export interface BoardMember {
   createdAt: string;
   endDate?: string;
   status: string;
+  createDate?: string| null;
+  lastModified?: string | null;
 }
 
 export interface BoardMemberRequest {
@@ -552,6 +558,7 @@ export interface Repayment {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  penaltyAmount?: number;
 }
 
 export interface RepaymentRequest {
@@ -687,4 +694,27 @@ export interface RecordSchedulePaymentRequest {
   amount: number;
   paymentDate: string;
   remarks?: string;
+}
+
+export interface User {
+  id: number;
+  firstname: string;
+  lastname: string;
+  email: string;
+  username: string;
+  userStatus: 'ACTIVE' | 'INACTIVE';
+  userPhoneNumber: string;
+  role: Role; 
+}
+
+export interface UserDTO {
+  firstname: string;
+  lastname: string;
+  email: string;
+  username: string;
+  userStatus: 'ACTIVE' | 'INACTIVE';
+  userPhoneNumber: string;
+  role: {
+    roleCode: number;
+  }; 
 }

@@ -43,6 +43,8 @@ import UserSavings from "./pages/user/Savings";
 import UserStatements from "./pages/user/Statements";
 import UserProfile from "./pages/user/Profile";
 import UserSettings from "./pages/user/Settings";
+import Users from "./pages/admin/Users";
+import GroupDetails from "./pages/admin/GroupDetails";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +88,7 @@ const App = () => (
             />
             
             <Route path="/admin/groups" element={<Groups />} />
+            <Route path="/admin/groups/:groupId" element={<GroupDetails />} />
             <Route
               path="/admin/loan-schedules"
               element={<RepaymentSchedules />}
@@ -107,6 +110,7 @@ const App = () => (
             <Route path="/admin/permissions" element={<Permissions />} />
             <Route path="/admin/board-members" element={<BoardMembers />} />
             <Route path="/admin/savings" element={<AdminSavings />} />
+            <Route path="/admin/users" element={<Users />} />
             <Route path="/admin/roles" element={<Roles />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/notifications" element={<Notifications />} />
