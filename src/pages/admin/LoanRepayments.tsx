@@ -239,10 +239,15 @@ const LoanRepayments = () => {
   const onSubmitRepayment = async (values: RepaymentFormValues) => {
     try {
       const repaymentData: RepaymentRequest = {
-        ...values,
+        loanId: values.loanId,
+        amount: values.amount,
+        principalAmount: values.principalAmount,
+        interestAmount: values.interestAmount,
+        // penaltyAmount: values.penaltyAmount,
         dueDate: format(values.dueDate, "yyyy-MM-dd"),
+        remarks: values.remarks,
         status: "PENDING",
-        isActive: true,
+        // isActive: true,
       };
 
       if (selectedRepayment) {
@@ -276,7 +281,12 @@ const LoanRepayments = () => {
   const onSubmitRecordPayment = async (values: RecordPaymentFormValues) => {
     try {
       const paymentData: RecordPaymentRequest = {
-        ...values,
+        id: values.id,
+        amount: values.amount,
+        paymentReference: values.paymentReference,
+        paymentMethod: values.paymentMethod,
+        receivedBy: values.receivedBy,
+        remarks: values.remarks,
       };
 
       await repaymentService.recordPayment(values.id, paymentData);
@@ -300,7 +310,8 @@ const LoanRepayments = () => {
   const onSubmitWaive = async (values: ActionFormValues) => {
     try {
       const waiveData: WaiveRequest = {
-        ...values,
+        id: values.id,
+        remarks: values.remarks,
       };
 
       await repaymentService.waiveRepayment(values.id, waiveData);
@@ -324,7 +335,8 @@ const LoanRepayments = () => {
   const onSubmitCancel = async (values: ActionFormValues) => {
     try {
       const cancelData: CancelRequest = {
-        ...values,
+        id: values.id,
+        remarks: values.remarks,
       };
 
       await repaymentService.cancelRepayment(values.id, cancelData);

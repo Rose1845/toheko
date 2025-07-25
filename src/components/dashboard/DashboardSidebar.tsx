@@ -218,6 +218,13 @@ export default function DashboardSidebar() {
             collapsed={collapsed}
           />
           <SidebarLink
+            to="/admin/board-members"
+            icon={<UserCog className="h-5 w-5" />}
+            label="Board Members"
+            active={isActive("/admin/board-members")}
+            collapsed={collapsed}
+          />
+          <SidebarLink
             to="/admin/groups"
             icon={<UsersRound className="h-5 w-5" />}
             label="Groups"
@@ -279,13 +286,6 @@ export default function DashboardSidebar() {
               icon={<CreditCard className="h-5 w-5" />}
               label="Penalty"
               active={isActive("/admin/loan-penalties")}
-              collapsed={collapsed}
-            />
-            <SidebarLink
-              to="/admin/loan-collaterals"
-              icon={<CreditCard className="h-5 w-5" />}
-              label="Collaterals"
-              active={isActive("/admin/loan-collaterals")}
               collapsed={collapsed}
             />
             <SidebarLink
@@ -373,7 +373,13 @@ export default function DashboardSidebar() {
               </p>
             )}
           </div>
-          
+           <SidebarLink
+            to="/admin/Users"
+            icon={<Users className="h-5 w-5" />}
+            label="Users"
+            active={isActive("/admin/users")}
+            collapsed={collapsed}
+          />
           <SidebarLink
             to="/admin/roles"
             icon={<Shield className="h-5 w-5" />}

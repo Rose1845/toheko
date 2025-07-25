@@ -196,7 +196,7 @@ const Groups: React.FC = () => {
       cell: (group: Group) => {
         if (!group) return null;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -256,6 +256,17 @@ const Groups: React.FC = () => {
               className="text-red-600 hover:text-red-800 hover:bg-red-100"
             >
               <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSelectedGroup(group);
+                officialForm.setValue("groupId", group.groupId);
+                setShowOfficialAddForm(true);
+              }}
+            >
+              Add Official
             </Button>
           </div>
         );
@@ -782,6 +793,17 @@ const Groups: React.FC = () => {
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setSelectedGroup(group);
+              officialForm.setValue("groupId", group.groupId);
+              setShowOfficialAddForm(true);
+            }}
+          >
+            Add Official
+          </Button>
         </div>
       ),
     },
@@ -806,7 +828,7 @@ const Groups: React.FC = () => {
     
     setShowOfficialEditForm(true);
   };
-  
+
 
 
 
@@ -949,7 +971,6 @@ const Groups: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {console.log('Groups data being passed to DataTable:', groups?.content)}
                 <DataTable
                   columns={groupColumns}
                   data={groups?.content || []}
