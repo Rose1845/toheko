@@ -43,8 +43,9 @@ import UserSavings from "./pages/user/Savings";
 import UserStatements from "./pages/user/Statements";
 import UserProfile from "./pages/user/Profile";
 import UserSettings from "./pages/user/Settings";
+import LoanApplication from "./pages/user/LoanApplication";
 import Users from "./pages/admin/Users";
-import GroupDetails from "./pages/admin/GroupDetails";
+import GroupDetails from "./pages/admin/GroupDetail
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="dashboard" element={<UserDashboard />} />
             <Route path="payments" element={<UserPayments />} />
             <Route path="loans" element={<UserLoans />} />
+            <Route path="loan-application" element={<LoanApplication />} />
             <Route path="savings" element={<UserSavings />} />
             <Route path="statements" element={<UserStatements />} />
             <Route path="profile" element={<UserProfile />} />
