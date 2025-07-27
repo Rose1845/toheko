@@ -1,23 +1,25 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import DashboardLayout from "@/pages/admin/DashboardLayout"; // Ensure this import is correct
-import { memberService } from "@/services/memberService";
-import { Member, SuspensionRequest } from "@/types/api";
-import { DataTable, Column } from "@/components/ui/data-table";
+import { Plus, Edit, Trash2, User, Users, Loader2, X, ChevronLeft } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -29,380 +31,305 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, User, UserCheck, UserMinus, UserPlus, Loader2, Users, Trash2, AlertTriangle } from "lucide-react";
-
-// Phone number validation and formatting
-const formatPhoneNumber = (phone: string): string => {
-  const cleaned = phone.replace(/\D/g, ""); // Remove non-digits
-  if (cleaned.startsWith("07") || cleaned.startsWith("01")) {
-    return `254${cleaned.substring(1)}`;
-  }
-  return cleaned;
-};
-
-// Form schema for member details with enhanced email validation (removed dateOfBirth)
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { memberService } from "@/services/memberService";
+import { nextOfKinService } from "@/services/nextOfKinService";
+import { Member, NextOfKin } from "@/types/api";
+import { formatDateSafe } from "@/lib/utils";
 const memberFormSchema = z.object({
   memberId: z.number().optional(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Please enter a valid email address (e.g., example@domain.com)"),
-  phoneNumber: z
-    .string()
-    .min(1, "Phone number is required")
-    .refine(
-      (value) => {
-        const cleaned = value.replace(/\D/g, "");
-        return cleaned.length === 10 || cleaned.length === 12;
-      },
-      {
-        message: "Phone number must be 10 digits (07...) or 12 digits (254...)",
-      }
-    ),
+  email: z.string().email("Invalid email format"),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   nationalId: z.string().min(1, "National ID is required"),
   address: z.string().min(1, "Address is required"),
-  status: z.string().optional(),
-});
-
-// Form schema for suspension
-const suspensionFormSchema = z.object({
-  reason: z.string().min(1, "Reason is required"),
-  suspendedUntil: z.string().optional(),
+  nextOfKins: z.array(
+    z.object({
+      id: z.number().optional(),
+      name: z.string().min(1, "Name is required"),
+      relationship: z.string().min(1, "Relationship is required"),
+      phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+      email: z.string().email("Invalid email").or(z.literal("")),
+      address: z.string().optional(),
+    })
+  ),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
-type SuspensionFormValues = z.infer<typeof suspensionFormSchema>;
 
-const Members: React.FC = () => {
-  const [showDetails, setShowDetails] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showSuspendForm, setShowSuspendForm] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+const Members = () => {
+  const [showForm, setShowForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("member");
   const { toast } = useToast();
-  const [isAddLoading, setIsAddLoading] = useState(false);
-  const [isEditLoading, setIsEditLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const memberForm = useForm<MemberFormValues>({
+  const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
-      memberId: 0,
       firstName: "",
       lastName: "",
       email: "",
       phoneNumber: "",
       nationalId: "",
       address: "",
-      status: "ACTIVE",
+      nextOfKins: [],
     },
   });
 
-  const suspensionForm = useForm<SuspensionFormValues>({
-    resolver: zodResolver(suspensionFormSchema),
-    defaultValues: {
-      reason: "",
-      suspendedUntil: "",
-    },
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "nextOfKins",
   });
 
-  // Fetch members data
-  const {
-    data: members,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<Member[]>({
+  const { data: members, isLoading } = useQuery({
     queryKey: ["members"],
     queryFn: memberService.getAllMembers,
   });
 
-  const handleViewDetails = (member: Member) => {
-    setSelectedMember(member);
-    setShowDetails(true);
+  const memberMutation = useMutation({
+    mutationFn: (data: Omit<MemberFormValues, "nextOfKins"> & { dateOfBirth: string; status: string }) =>
+      isEditing
+        ? memberService.updateMember(data)
+        : memberService.createMember(data),
+    onSuccess: (data) => {
+      if (!isEditing) {
+        form.setValue("memberId", data.id);
+      }
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      toast({
+        title: "Success",
+        description: "Member details saved successfully",
+      });
+      // Only auto-switch to next of kin tab for new members
+      if (!isEditing) {
+        setActiveTab("nextOfKin");
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddNextOfKin = async (nextOfKin: NextOfKin, memberId: number) => {
+    try {
+      const response = await nextOfKinService.createNextOfKin({
+        ...nextOfKin,
+        memberId
+      });
+      return response;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add next of kin",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
-  const handleEditMember = (member: Member) => {
-    memberForm.reset({
-      memberId: member.memberId,
-      firstName: member.firstName,
-      lastName: member.lastName,
-      email: member.email,
-      phoneNumber: member.phoneNumber,
-      nationalId: member.nationalId,
-      address: member.address,
-      status: member.status,
-    });
-    setSelectedMember(member);
-    setShowEditForm(true);
+  const handleUpdateNextOfKin = async (nextOfKin: NextOfKin) => {
+    try {
+      if (!nextOfKin.id) return;
+      const response = await nextOfKinService.updateNextOfKin(nextOfKin.id, nextOfKin);
+      return response;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update next of kin",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDeleteNextOfKin = async (id: number) => {
+    try {
+      await nextOfKinService.deleteNextOfKin(id);
+      return true;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete next of kin",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const handleAddMember = () => {
-    memberForm.reset({
+    form.reset({
       firstName: "",
       lastName: "",
       email: "",
       phoneNumber: "",
       nationalId: "",
       address: "",
-      status: "ACTIVE",
+      nextOfKins: [],
     });
-    setSelectedMember(null);
-    setShowAddForm(true);
+    setIsEditing(false);
+    setActiveTab("member");
+    setShowForm(true);
   };
 
-  const handleSuspendMember = (member: Member) => {
-    suspensionForm.reset({
-      reason: "",
-      suspendedUntil: "",
+  const handleEditMember = (member: Member, tab: "member" | "nextOfKin" = "member") => {
+    form.reset({
+      ...member,
+      nextOfKins: member.nextOfKins || [],
     });
-    setSelectedMember(member);
-    setShowSuspendForm(true);
+    setIsEditing(true);
+    setActiveTab(tab); // Allow opening directly to next of kin tab
+    setShowForm(true);
   };
 
-  const handleConfirmDelete = (member: Member) => {
-    setMemberToDelete(member);
-    setShowDeleteConfirm(true);
+  const onSubmitMember = (values: Omit<MemberFormValues, "nextOfKins">) => {
+    // Provide default values for required fields if not present
+    memberMutation.mutate({
+      ...values,
+      dateOfBirth: (values as any).dateOfBirth || "",
+      status: (values as any).status || "ACTIVE",
+    });
   };
 
-  const handleDeleteMember = async () => {
-    if (!memberToDelete) return;
-  
-    try {
-      const result = await memberService.deleteMember(memberToDelete.memberId);
-      toast({
-        title: "Success",
-        description: result.message || "Member deleted successfully.",
-      });
-      refetch();
-    } catch (error: any) {
-      console.error("Error deleting member:", error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to delete member. This may be due to associated user records. Please delete or reassign them first, then try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setShowDeleteConfirm(false);
-      setMemberToDelete(null);
-    }
-  };
-  const handleReactivateMember = async (memberId: number) => {
-    try {
-      const result = await memberService.reactivateMember(memberId);
-      toast({
-        title: "Success",
-        description: result.message || "Member reactivated successfully.",
-      });
-      refetch();
-    } catch (error: any) {
-      console.error("Error reactivating member:", error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to reactivate member. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const onSubmitEdit = async (values: MemberFormValues) => {
-    setIsEditLoading(true);
-    try {
-      const formattedPhone = formatPhoneNumber(values.phoneNumber);
-      const memberRequest = {
-        memberId: values.memberId,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        phoneNumber: formattedPhone,
-        nationalId: values.nationalId,
-        address: values.address,
-        status: values.status,
-      };
-
-      const result = await memberService.updateMember(memberRequest);
-      toast({
-        title: "Success",
-        description: result.message || "Member updated successfully.",
-      });
-      setShowEditForm(false);
-      refetch();
-    } catch (error: any) {
-      console.error("Error updating member:", error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to update member. Please check the details and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsEditLoading(false);
-    }
-  };
-
-  const onSubmitAdd = async (values: MemberFormValues) => {
-    setIsAddLoading(true);
-    try {
-      const formattedPhone = formatPhoneNumber(values.phoneNumber);
-      const memberRequest = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        phoneNumber: formattedPhone,
-        nationalId: values.nationalId,
-        address: values.address,
-        status: "ACTIVE",
-      };
-
-      const result = await memberService.createMember(memberRequest);
-      toast({
-        title: "Success",
-        description: result.message || "Member added successfully.",
-      });
-      setShowAddForm(false);
-      refetch();
-    } catch (error: any) {
-      console.error("Error creating member:", error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to add member. Please check the details and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddLoading(false);
-    }
-  };
-
-  const onSubmitSuspension = async (values: SuspensionFormValues) => {
-    if (!selectedMember) return;
+  const onSubmitNextOfKin = async (values: MemberFormValues) => {
+    if (!values.memberId) return;
 
     try {
-      const suspensionRequest: SuspensionRequest = {
-        reason: values.reason,
-        suspendedUntil: values.suspendedUntil || undefined,
-      };
+      const memberId = values.memberId;
+      const currentNextOfKins = values.nextOfKins;
+      const originalNextOfKins = isEditing
+        ? members?.find(m => m.memberId === memberId)?.nextOfKins || []
+        : [];
 
-      const result = await memberService.suspendMember(
-        selectedMember.memberId,
-        suspensionRequest
+      // Process deletions
+      const toDelete = originalNextOfKins.filter(original =>
+        !currentNextOfKins.some(current => current.id === original.id)
       );
+      await Promise.all(toDelete.map(nok => nok.id ? handleDeleteNextOfKin(nok.id) : Promise.resolve()));
+
+      // Process updates and additions
+      await Promise.all(currentNextOfKins.map(nok => {
+        if (nok.id) {
+          // Map form object to NextOfKin type
+          const original = originalNextOfKins.find(orig => orig.id === nok.id);
+          return handleUpdateNextOfKin({
+            ...original,
+            ...nok,
+            nextOfKinId: nok.id ?? original?.nextOfKinId ?? 0,
+            memberId: memberId,
+          });
+        } else {
+          // Map form object to NextOfKin type for creation
+          return handleAddNextOfKin(
+            {
+              ...nok,
+              nextOfKinId: 0, // or undefined if your backend auto-generates
+              memberId: memberId,
+            } as NextOfKin,
+            memberId
+          );
+        }
+      }));
+
+      queryClient.invalidateQueries({ queryKey: ["members"] });
       toast({
         title: "Success",
-        description: result.message || "Member suspended successfully.",
+        description: "Next of kin saved successfully",
       });
-      setShowSuspendForm(false);
-      refetch();
-    } catch (error: any) {
-      console.error("Error suspending member:", error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to suspend member. Please try again.",
-        variant: "destructive",
-      });
+      setShowForm(false);
+    } catch (error) {
+      console.error("Error saving next of kin:", error);
     }
   };
 
-  // Define columns for DataTable (removed Registration Date)
-  const columns: Column<Member>[] = [
-    {
-      header: "ID",
-      accessorKey: "memberId",
-      sortable: true,
-    },
-    {
-      header: "Member No",
-      accessorKey: "memberNo",
-      sortable: true,
-    },
+  const addNextOfKin = () => {
+    append({
+      name: "",
+      relationship: "",
+      phoneNumber: "",
+      email: "",
+      address: "",
+    });
+  };
+
+  const removeNextOfKin = (index: number) => {
+    remove(index);
+  };
+
+  const columns = [
+    { header: "ID", accessorKey: "memberId" },
     {
       header: "Name",
       accessorKey: "firstName",
-      sortable: true,
-      cell: (member) => (
-        <span className="font-medium">
-          {member.firstName} {member.lastName}
-        </span>
+      cell: (row: any) => `${row.firstName} ${row.lastName}`
+    },
+    { header: "Email", accessorKey: "email" },
+    { header: "Phone", accessorKey: "phoneNumber" },
+    {
+      header: "Next of Kin",
+      accessorKey: "nextOfKins",
+      cell: (row: any) => (
+        <Button
+          variant="link"
+          className="h-auto p-0"
+          onClick={() => handleEditMember(row, "nextOfKin")}
+        >
+          <Badge variant="outline">
+            {row.nextOfKins?.length || 0}
+          </Badge>
+        </Button>
       ),
     },
     {
-      header: "Contact",
-      accessorKey: "email",
+      header: "Created",
+      accessorKey: "createDate",
       sortable: true,
-      cell: (member) => (
+      cell: (row) => (
         <div className="flex flex-col">
-          <span>{member.email}</span>
-          <span className="text-xs text-muted-foreground">{member.phoneNumber}</span>
+          <span>{formatDateSafe(row.createdAt, "MMM dd, yyyy")}</span>
+          <span className="text-xs text-muted-foreground">
+            {formatDateSafe(row.createdAt, "hh:mm a")}
+          </span>
         </div>
       ),
     },
     {
-      header: "Status",
-      accessorKey: "status",
+      header: "Last Updated",
+      accessorKey: "lastModified",
       sortable: true,
-      cell: (member) => (
-        <Badge
-          className={
-            member.status === "ACTIVE"
-              ? "bg-green-100 text-green-800 hover:bg-green-100"
-              : member.status === "SUSPENDED"
-              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-              : "bg-red-100 text-red-800 hover:bg-red-100"
-          }
-        >
-          {member.status}
-        </Badge>
+      cell: (row) => (
+        <div className="flex flex-col">
+          <span>{formatDateSafe(row.updatedAt, "MMM dd, yyyy")}</span>
+          <span className="text-xs text-muted-foreground">
+            {formatDateSafe(row.updatedAt, "hh:mm a")}
+          </span>
+        </div>
       ),
     },
     {
       header: "Actions",
-      accessorKey: "memberId",
-      cell: (member) => (
-        <div className="flex space-x-2 justify-end">
+      accessorKey: "actions",
+      cell: (row: any) => (
+        <div className="flex gap-2">
           <Button
+            size="sm"
             variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditMember(member);
-            }}
+            onClick={() => handleEditMember(row)}
           >
-            <Edit className="h-4 w-4 mr-1" />
-            Edit
+            <Edit className="h-4 w-4" />
           </Button>
-          {member.status === "ACTIVE" ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSuspendMember(member);
-              }}
-            >
-              <UserMinus className="h-4 w-4 mr-1" />
-              Suspend
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleReactivateMember(member.memberId);
-              }}
-            >
-              <UserCheck className="h-4 w-4 mr-1" />
-              Reactivate
-            </Button>
-          )}
           <Button
-            variant="destructive"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleConfirmDelete(member);
-            }}
+            variant="destructive"
+            onClick={() => handleEditMember(row, "nextOfKin")}
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
+            <Users className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -410,534 +337,314 @@ const Members: React.FC = () => {
   ];
 
   return (
-    // <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Members</CardTitle>
-              <CardDescription>
-                Manage SACCO members and their accounts
-              </CardDescription>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Members</CardTitle>
+            <CardDescription>Manage SACCO members and their next of kin
+            </CardDescription>
+          </div>
+          <Button onClick={handleAddMember}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Member
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-            <Button onClick={handleAddMember}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Member
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Loading members...</span>
-              </div>
-            ) : members?.length === 0 ? (
-              <div className="text-center py-10">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No members found</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Get started by adding new members to the SACCO.
-                </p>
+          ) : (
+            <DataTable
+              data={members || []}
+              columns={columns}
+              keyField="memberId"
+              emptyMessage="No members found"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Member" : "Add New Member"}
+            </DialogTitle>
+            {activeTab === "nextOfKin" && (
+              <div className="flex items-center space-x-2 pt-2">
                 <Button
-                  onClick={handleAddMember}
-                  className="mt-4"
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab("member")}
                 >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Member
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  {isEditing ? "Member Details" : "Back to Member"}
                 </Button>
               </div>
-            ) : (
-              <DataTable
-                data={members}
-                columns={columns}
-                keyField="memberId"
-                pagination={true}
-                searchable={true}
-                pageSize={10}
-                pageSizeOptions={[5, 10, 25, 50]}
-                emptyMessage="No members found"
-                loading={isLoading}
-                onRowClick={(member) => handleViewDetails(member)}
-              />
             )}
-          </CardContent>
-        </Card>
+          </DialogHeader>
 
-        {/* View Member Details Dialog */}
-        <Dialog open={showDetails} onOpenChange={setShowDetails}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Member Details</DialogTitle>
-              <DialogDescription>
-                Complete information about the selected member
-              </DialogDescription>
-            </DialogHeader>
-            {selectedMember && (
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium text-gray-500">Member Number</h3>
-                    <p>{selectedMember.memberNo}</p>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(
+                activeTab === "member" ? onSubmitMember : onSubmitNextOfKin
+              )}
+              className="space-y-6 pt-2"
+            >
+              {activeTab === "member" ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="nationalId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>National ID</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Full Name</h3>
-                    <p>{`${selectedMember.firstName} ${selectedMember.lastName}`}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Email</h3>
-                    <p>{selectedMember.email}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Phone Number</h3>
-                    <p>{selectedMember.phoneNumber}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">National ID</h3>
-                    <p>{selectedMember.nationalId}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Date of Birth</h3>
-                    <p>
-                      {selectedMember.dateOfBirth
-                        ? new Date(selectedMember.dateOfBirth).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Status</h3>
-                    <Badge
-                      variant={
-                        selectedMember.status === "ACTIVE"
-                          ? "default"
-                          : "destructive"
-                      }
+
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium">Next of Kin Details</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {isEditing ? "Edit" : "Add"} next of kin for this member
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addNextOfKin}
                     >
-                      {selectedMember.status}
-                    </Badge>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Next of Kin
+                    </Button>
                   </div>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-500">Address</h3>
-                  <p>{selectedMember.address}</p>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDetails(false)}
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowDetails(false);
-                      handleEditMember(selectedMember);
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-1" /> Edit Member
-                  </Button>
-                </DialogFooter>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
 
-        {/* Add Member Form Dialog */}
-        <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-          <DialogContent className="sm:max-w-[600px] bg-white p-6 rounded-lg shadow-lg">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-gray-900">Add New Member</DialogTitle>
-              <DialogDescription className="text-gray-600">
-                Enter the details for the new member below.
-              </DialogDescription>
-            </DialogHeader>
+                  <Separator />
 
-            <Form {...memberForm}>
-              <form
-                onSubmit={memberForm.handleSubmit(onSubmitAdd)}
-                className="space-y-6 py-4"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={memberForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">First Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  {fields.length === 0 ? (
+                    <div className="text-center py-8 border rounded-lg">
+                      <Users className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <h4 className="mt-2 font-medium">No Next of Kin Added</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Add at least one next of kin for this member
+                      </p>
+                    </div>
+                  ) : (
+                    fields.map((field, index) => (
+                      <div key={field.id} className="border rounded-lg p-4 space-y-4 relative group">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-3 right-3 h-8 w-8 p-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeNextOfKin(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`nextOfKins.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Last Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                          <FormField
+                            control={form.control}
+                            name={`nextOfKins.${index}.relationship`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Relationship</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                          <FormField
+                            control={form.control}
+                            name={`nextOfKins.${index}.phoneNumber`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Phone Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="e.g., 07xxxxxxxx or 254xxxxxxxx"
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                          <FormField
+                            control={form.control}
+                            name={`nextOfKins.${index}.email`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="nationalId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">National ID</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={memberForm.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Address</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          rows={4}
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name={`nextOfKins.${index}.address`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} rows={2} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm" />
-                    </FormItem>
+                      </div>
+                    ))
                   )}
-                />
+                </div>
+              )}
 
-                <DialogFooter className="flex justify-end mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowAddForm(false)}
-                    className="mr-4"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isAddLoading}
-                    className="bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isAddLoading ? (
-                      <>
+              <DialogFooter className="pt-4">
+                {activeTab === "member" ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                    // disabled={memberMutation.isLoading}
+                    >
+                      {/* {memberMutation.isLoading && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Add Member
-                      </>
+                      )} */}
+                      {isEditing ? "Update Member" : "Save Member Details"}
+                    </Button>
+                    {isEditing && (
+                      <Button
+                        type="button"
+                        onClick={() => setActiveTab("nextOfKin")}
+                      >
+                        Edit Next of Kin
+                      </Button>
                     )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Member Form Dialog */}
-        <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
-          <DialogContent className="sm:max-w-[600px] bg-white p-6 rounded-lg shadow-lg">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-gray-900">Edit Member</DialogTitle>
-              <DialogDescription className="text-gray-600">
-                Update the selected member's information below.
-              </DialogDescription>
-            </DialogHeader>
-
-            <Form {...memberForm}>
-              <form
-                onSubmit={memberForm.handleSubmit(onSubmitEdit)}
-                className="space-y-6 py-4"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={memberForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">First Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Last Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Phone Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="e.g., 07xxxxxxxx or 254xxxxxxxx"
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={memberForm.control}
-                    name="nationalId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">National ID</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-600 text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={memberForm.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Address</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          className="w-full border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                          rows={4}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm" />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter className="flex justify-end mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditForm(false)}
-                    className="mr-4"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isEditLoading}
-                    className="bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isEditLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Suspend Member Form Dialog */}
-        <Dialog open={showSuspendForm} onOpenChange={setShowSuspendForm}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Suspend Member</DialogTitle>
-              <DialogDescription>
-                Provide a reason for suspending this member.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...suspensionForm}>
-              <form
-                onSubmit={suspensionForm.handleSubmit(onSubmitSuspension)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={suspensionForm.control}
-                  name="reason"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reason for Suspension</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Enter the reason for suspension"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={suspensionForm.control}
-                  name="suspendedUntil"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Suspended Until (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setShowSuspendForm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button variant="destructive" type="submit">
-                    Suspend Member
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent className="sm:max-w-[425px] bg-white p-6 rounded-lg shadow-lg">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center">
-                <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
-                Confirm Deletion
-              </DialogTitle>
-              <DialogDescription className="text-gray-600 mt-2">
-                Are you sure you want to delete{" "}
-                <span className="font-semibold">
-                  {memberToDelete ? `${memberToDelete.firstName} ${memberToDelete.lastName}` : ""}
-                </span>
-                ? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setMemberToDelete(null);
-                }}
-                className="mr-2"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteMember}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    // </DashboardLayout>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => isEditing ? setShowForm(false) : setActiveTab("member")}
+                    >
+                      {isEditing ? "Cancel" : "Back"}
+                    </Button>
+                    <Button
+                      type="submit"
+                    >
+                      {isEditing ? "Save Changes" : "Complete Registration"}
+                    </Button>
+                  </>
+                )}
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
 export default Members;
+

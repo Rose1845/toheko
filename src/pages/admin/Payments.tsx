@@ -389,25 +389,24 @@ const Payments = () => {
                     <TableBody>
                       {payments.map((payment) => (
                         <TableRow key={payment.id}>
-                          <TableCell>{payment.referenceNumber}</TableCell>
+                          <TableCell>{payment.transactionReference}</TableCell>
                           <TableCell>
-                            {payment.accountId?.accountNumber || "N/A"}
+                            {payment.account?.accountNumber || "--"}
                           </TableCell>
                           <TableCell>
-                            {payment.accountId?.member
-                              ? `${payment.accountId.member.firstName} ${payment.accountId.member.lastName}`
+                            {payment?.account?.member
+                              ? `${payment?.account?.member.firstName} ${payment?.account?.member.lastName}`
                               : "N/A"}
                           </TableCell>
                           <TableCell>
                             {formatCurrency(payment.amount)}
                           </TableCell>
                           <TableCell>
-                            {payment.paymentType?.name || "N/A"}
+                            {payment.paymentType?.name || "--"}
                           </TableCell>
                           <TableCell>
-                            {payment.modeOfPaymentId ? (
-                              modesOfPayment?.find(mode => mode.modeOfPaymentId === payment.modeOfPaymentId)?.name || "N/A"
-                            ) : "N/A"}
+                            {payment.modeOfPayment ?
+                              payment.modeOfPayment.name : "--"}
                           </TableCell>
                           <TableCell>
                             {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : "N/A"}
