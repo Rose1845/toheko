@@ -45,7 +45,7 @@ import UserProfile from "./pages/user/Profile";
 import UserSettings from "./pages/user/Settings";
 import LoanApplication from "./pages/user/LoanApplication";
 import Users from "./pages/admin/Users";
-import GroupDetails from "./pages/admin/GroupDetail
+import GroupDetails from "./pages/admin/GroupDetails";
 
 const queryClient = new QueryClient();
 
