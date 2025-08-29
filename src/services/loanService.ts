@@ -206,7 +206,40 @@ export const loanService = {
   getLoanGuarantors: async (loanId: number): Promise<LoanGuarantor[]> => {
     const response = await apiClient.get(`/api/v1/loan-guarantors/getAll?loanId=${loanId}`);
     return response.data.data.content;
-  }
+  },
 
+  /**
+   * Submit a loan approval or rejection decision
+   * @param decisionData {object} - { loanApplicationId, decision, comments }
+   * @returns {Promise<AcknowledgementResponse>}
+   */
+  submitLoanApprovalDecision: async (decisionData: {
+    applicationId: number;
+    decision: 'APPROVE' | 'REJECT';
+    comments?: string;
+    approverType?: string;
+    approverUserId?: number;
+  }): Promise<AcknowledgementResponse> => {
+    const response = await apiClient.post(
+      '/api/v1/loan-applications-approvals/decisions',
+      decisionData
+    );
+    return response.data;
+  },
+
+  fetchLoanAccountByApplicationId: async (loanApplicationId: number) => {
+    const response = await apiClient.get(`/api/v1/loan-accounts/fetch-loan-applicationId/${loanApplicationId}`);
+    return response.data;
+  },
+
+  disburseLoanAccount: async (payload: { loanAccountId: number; amount: number; remarks: string }) => {
+    const response = await apiClient.post('/api/v1/loan-accounts/disburse', payload);
+    return response.data;
+  },
+
+  getAllLoanAccounts: async (page = 1, size = 10): Promise<any> => {
+    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?page=${page - 1}&size=${size}`);
+    return response.data;
+  }
   
 };
