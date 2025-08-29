@@ -68,15 +68,18 @@ const LoanAccounts = () => {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            Loan Accounts
+          </h1>
+          <p className="text-gray-500">
+            View and manage all loan accounts, including disbursed and pending accounts.
+          </p>
+        </div>
         <Card className="shadow-sm">
-          <CardHeader>
+          {/* <CardHeader>
             <CardTitle>Loan Accounts</CardTitle>
-            <div className="flex gap-2 mt-2">
-              <Button variant={statusFilter === "ALL" ? "secondary" : "outline"} onClick={() => setStatusFilter("ALL")}>All</Button>
-              <Button variant={statusFilter === "PENDING_DISBURSEMENT" ? "secondary" : "outline"} onClick={() => setStatusFilter("PENDING_DISBURSEMENT")}>Pending Disbursement</Button>
-              <Button variant={statusFilter === "ACTIVE" ? "secondary" : "outline"} onClick={() => setStatusFilter("ACTIVE")}>Active</Button>
-            </div>
-          </CardHeader>
+          </CardHeader> */}
           <CardContent>
             {loading ? (
               <div className="flex justify-center items-center py-8">
