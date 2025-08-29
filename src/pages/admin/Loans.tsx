@@ -33,11 +33,17 @@ import { Column, DataTable } from "@/components/ui/data-table";
 import { Loader2, PiggyBank, Plus } from "lucide-react";
 import ApproveAndGenerateRepayment from "./ApproveAndGenerateRepayment";
 import LoanApplicationForm from "./loans/LoanApplication";
+import { useForm } from "react-hook-form";
+import LoanDetailsModal from "./LoanDetailsModal";
+import ReviewLoanModal from "./ReviewLoanModal";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<LoanApplication | null>(null);
   const [open, setOpen] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [decision, setDecision] = useState("APPROVE");
+  const [showDisburseModal, setShowDisburseModal] = useState(false);
 
   const [loans, setLoans] = useState<LoanApplication[]>([]);
   const [loanTypes, setLoanTypes] = useState<LoanProduct[]>([]);
@@ -45,9 +51,15 @@ const Loans = () => {
   const [selectedLoan, setSelectedLoan] = useState<LoanApplication | null>(
     null
   );
+  const [approveLoanId, setApproveLoanId] = useState<number | null>(null);
+  const [disburseLoan, setDisburseLoan] = useState(null);
+  const [disburseAccountId, setDisburseAccountId] = useState(null);
+  const [disburseLoading, setDisburseLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [activeTab, setActiveTab] = useState("applications");
   const { toast } = useToast();
+  const approveForm = useForm({ defaultValues: { comments: "" } });
+  const disburseForm = useForm({ defaultValues: { amount: "", remarks: "" } });
 
   const { data: members } = useQuery({
     queryKey: ["members"],
@@ -111,25 +123,6 @@ const Loans = () => {
         return "outline";
     }
   };
-  const handleApproveLoan = async (loanApplicationId: number) => {
-    try {
-      await loanService.approveLoan(loanApplicationId);
-      toast({
-        title: "Loan Approved",
-        description: "The loan has been successfully approved.",
-      });
-      // Refresh loans
-      const updatedLoans = await loanService.getAllLoanApplications();
-      setLoans(updatedLoans);
-    } catch (error) {
-      console.error("Error approving loan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve the loan. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleGenerateRepaymentSchedule = async (loan: LoanApplication) => {
     console.log("loan", loan);
@@ -172,6 +165,76 @@ const Loans = () => {
       });
     }
   };
+
+  const handleOpenReviewModal = (loanId: number) => {
+    setApproveLoanId(loanId);
+    setDecision("APPROVE");
+    setShowApproveModal(true);
+  };
+
+  const handleReviewSubmit = async (data) => {
+    if (!approveLoanId) return;
+    try {
+      await loanService.submitLoanApprovalDecision({
+        applicationId: approveLoanId,
+        decision: decision === "APPROVE" ? "APPROVE" : "REJECT",
+        comments: data.comments,
+        approverType: userRole,
+        approverUserId: Number(userId),
+      });
+      toast({ title: `Loan ${decision === "APPROVE" ? "Approved" : "Rejected"}` });
+      setShowApproveModal(false);
+      setApproveLoanId(null);
+      approveForm.reset();
+      // Refresh loans
+      const updatedLoans = await loanService.getAllLoanApplications();
+      setLoans(updatedLoans);
+    } catch (error) {
+      toast({ title: "Error", description: `Failed to ${decision.toLowerCase()} loan.`, variant: "destructive" });
+    }
+  };
+
+  const handleOpenDisburseModal = async (loan) => {
+    setDisburseLoan(loan);
+    disburseForm.reset({ amount: loan.amount, remarks: '' });
+    setDisburseLoading(true);
+    try {
+      const response = await loanService.fetchLoanAccountByApplicationId(loan.loanApplicationId);
+      setDisburseAccountId(response.id);
+      setShowDisburseModal(true);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to fetch loan account.', variant: 'destructive' });
+    } finally {
+      setDisburseLoading(false);
+    }
+  };
+
+  const handleDisburseSubmit = async (data) => {
+    if (!disburseAccountId) return;
+    setDisburseLoading(true);
+    try {
+      await loanService.disburseLoanAccount({
+        loanAccountId: disburseAccountId,
+        amount: Number(data.amount),
+        remarks: data.remarks,
+      });
+      toast({ title: 'Loan Disbursed', description: 'Loan has been successfully disbursed.' });
+      setShowDisburseModal(false);
+      setDisburseLoan(null);
+      disburseForm.reset();
+      // Refresh loans
+      const updatedLoans = await loanService.getAllLoanApplications();
+      setLoans(updatedLoans);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to disburse loan.', variant: 'destructive' });
+    } finally {
+      setDisburseLoading(false);
+    }
+  };
+
+  // Get userId and role from localStorage
+  const userId = localStorage.getItem("userId");
+  const userRole = localStorage.getItem("role");
 
   const columns: Column<LoanApplication>[] = [
     {
@@ -224,11 +287,15 @@ const Loans = () => {
       cell: (loan) => (
         <span
           className={`px-2 py-1 rounded-full text-xs ${
-            loan.status == "Pending"
-              ? "bg-green-100 text-green-800"
-              : loan.status == "COMPLETED"
+            loan.status === "PENDING"
               ? "bg-blue-100 text-blue-800"
-              : "bg-red-100 text-red-800"
+              : loan.status === "DISBURSED"
+              ? "bg-green-100 text-green-800"
+              : loan.status === "REJECTED"
+              ? "bg-red-100 text-red-800"
+              : loan.status === "APPROVED"
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
           }`}
         >
           {loan?.status}
@@ -299,27 +366,52 @@ const Loans = () => {
     header: "Actions",
     accessorKey: "loanApplicationId",
     cell: (loan) => (
-      <div className="">
+      <div className="flex gap-2">
         <Button
-          variant="ghost"
+          className="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded px-3 py-1 transition-all duration-150 shadow-none"
           size="sm"
           onClick={() => handleViewDetails(loan)}
+          title="View Details"
         >
           View
         </Button>
         <Button
-          variant="ghost"
+          className={`bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 rounded px-3 py-1 transition-all duration-150 shadow-none ${loan.status !== "PENDING" ? 'opacity-50 cursor-not-allowed' : ''}`}
           size="sm"
           onClick={() => {
             setEditLoan(loan);
             setShowForm(true);
           }}
+          disabled={loan.status !== "PENDING"}
+          title="Edit Loan"
         >
           Edit
         </Button>
-      </div>
-    ),
-  },
+        {(loan.status === "PENDING" || loan.status === "UNDER_REVIEW") &&
+          ["ADMIN", "LOAN_OFFICIAL"].includes(userRole) && (
+            <Button
+              className="bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded px-3 py-1 transition-all duration-150 shadow-none"
+              size="sm"
+              onClick={() => handleOpenReviewModal(loan.loanApplicationId)}
+              title="Review Loan"
+            >
+              Review
+            </Button>
+          )}
+      {loan.status === "APPROVED" && userRole === "ADMIN" && (
+        <Button
+          className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded px-3 py-1 transition-all duration-150 shadow-none"
+          size="sm"
+          onClick={() => handleOpenDisburseModal(loan)}
+          disabled={disburseLoading}
+          title="Disburse Loan"
+        >
+          Disburse
+        </Button>
+      )}
+    </div>
+  ),
+},
   ];
 
   const loantypescolumns: Column<LoanProduct>[] = [
@@ -386,6 +478,23 @@ const Loans = () => {
       ),
     },
   ];
+  // Fetch loan details by application ID
+  const [loanDetails, setLoanDetails] = useState(null);
+  const fetchLoanDetails = async (applicationId) => {
+    try {
+      const response = await loanService.getLoanApplicationById(applicationId);
+      setLoanDetails(response);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to fetch loan details.", variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    if (showDetails && selectedLoan) {
+      fetchLoanDetails(selectedLoan.loanApplicationId);
+    }
+  }, [showDetails, selectedLoan]);
+
   return (
     <DashboardLayout>
       <div className="container mx-auto py-8">
@@ -452,43 +561,56 @@ const Loans = () => {
             </Card>
       
 
-        <Dialog open={showDetails} onOpenChange={setShowDetails}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Loan Application Details</DialogTitle>
-              <DialogDescription>
-                Complete information about the selected loan application
-              </DialogDescription>
-            </DialogHeader>
-            {selectedLoan && (
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium text-gray-500">Loan ID</h3>
-                    <p>{selectedLoan.loanApplicationId}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">Member ID</h3>
-                    <p>{selectedLoan.memberId}</p>
-                  </div>
-                  {/* <div>
-                    <h3 className="font-medium text-gray-500">Loan Type</h3>
-                    <p>{getLoanTypeName(selectedLoan.loanTypeId)}</p>
-                  </div> */}
+        <LoanDetailsModal 
+          open={showDetails}
+          onOpenChange={setShowDetails}
+          loanDetails={loanDetails}
+          getMemberName={getMemberName}
+        />
 
-                  <div>
-                    <h3 className="font-medium text-gray-500">Amount</h3>
-                    <p>KSH {selectedLoan.amount.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-500">
-                      Monthly Repayment
-                    </h3>
-                    <p>KSH {selectedLoan.termDays.toLocaleString()}</p>
-                  </div>
-                </div>
+        <ReviewLoanModal
+          open={showApproveModal}
+          onOpenChange={setShowApproveModal}
+          approveForm={approveForm}
+          handleReviewSubmit={handleReviewSubmit}
+          decision={decision}
+          setDecision={setDecision}
+          disburseLoading={disburseLoading}
+        />
+
+        <Dialog open={showDisburseModal} onOpenChange={setShowDisburseModal}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Disburse Loan</DialogTitle>
+              <DialogDescription>Enter the amount and remarks to disburse this loan.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={disburseForm.handleSubmit(handleDisburseSubmit)}>
+              <div className="mb-4">
+                <label className="block mb-1">Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  className="w-full border rounded p-2"
+                  {...disburseForm.register("amount", { required: true })}
+                  placeholder="Enter amount"
+                />
+                <label className="block mb-1 mt-2">Remarks</label>
+                <textarea
+                  className="w-full border rounded p-2"
+                  {...disburseForm.register("remarks")}
+                  placeholder="Enter remarks (optional)"
+                />
               </div>
-            )}
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowDisburseModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="secondary" disabled={disburseLoading}>
+                  Disburse
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

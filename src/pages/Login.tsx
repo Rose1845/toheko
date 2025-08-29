@@ -108,6 +108,8 @@ const Login = () => {
           // Decode the JWT token to extract user information
           const decodedToken = jwtDecode<TohekoJwtPayload>(response.access_token);
           console.log('Decoded JWT Token:', decodedToken);
+          localStorage.setItem("userId", decodedToken.userId);
+          localStorage.setItem("role", decodedToken.role);
           
           // Extract role from the token
           const userRole = decodedToken.role || '';
@@ -118,8 +120,8 @@ const Login = () => {
           
           if (isMember) {
             // Redirect to user dashboard if the user is a member
-            navigate("/user/dashboard");
-                        // navigate("/admin/dashboard");
+            // navigate("/user/dashboard");
+                        navigate("/admin/dashboard");
 
           } else {
             // Redirect to admin dashboard for other roles
