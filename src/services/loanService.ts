@@ -235,6 +235,11 @@ export const loanService = {
   disburseLoanAccount: async (payload: { loanAccountId: number; amount: number; remarks: string }) => {
     const response = await apiClient.post('/api/v1/loan-accounts/disburse', payload);
     return response.data;
+  },
+
+  getAllLoanAccounts: async (page = 1, size = 10): Promise<any> => {
+    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?page=${page - 1}&size=${size}`);
+    return response.data;
   }
   
 };

@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
@@ -57,17 +58,24 @@ const SidebarSubmenu = ({
   label: string;
   collapsed: boolean;
   children: React.ReactNode;
-  paths?: string[]; // Add this prop to define active paths
+  paths?: string[];
 }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Automatically open if current path matches any of the submenu paths
+  // Automatically open if current path matches any of the submenu paths or any child link is active
   useEffect(() => {
-    if (paths.some((path) => location.pathname.startsWith(path))) {
+    if (
+      paths.some((path) => location.pathname.startsWith(path)) ||
+      React.Children.toArray(children).some(
+        (child: any) => child?.props?.active
+      )
+    ) {
       setIsOpen(true);
+    } else {
+      setIsOpen(false);
     }
-  }, [location.pathname, paths]);
+  }, [location.pathname, paths, children]);
 
   const toggle = () => setIsOpen((prev) => !prev);
 
@@ -99,7 +107,6 @@ const SidebarSubmenu = ({
     </div>
   );
 };
-
 
 export default function DashboardSidebar() {
   const location = useLocation();
@@ -309,6 +316,13 @@ export default function DashboardSidebar() {
               active={isActive("/admin/loan-disbursements")}
               collapsed={collapsed}
             />
+            <SidebarLink
+              to="/admin/loan-accounts"
+              icon={<CreditCard className="h-5 w-5" />}
+              label="Loan Accounts"
+              active={isActive("/admin/loan-accounts")}
+              collapsed={collapsed}
+            />
           </SidebarSubmenu>
 
           <SidebarLink
@@ -373,7 +387,7 @@ export default function DashboardSidebar() {
               </p>
             )}
           </div>
-           <SidebarLink
+          <SidebarLink
             to="/admin/Users"
             icon={<Users className="h-5 w-5" />}
             label="Users"
