@@ -6,7 +6,7 @@ const API_URL = "https://sacco-app-production.up.railway.app/api/v1";
 export const disbursementService = {
   // Get all disbursements
   getAllDisbursements: async (): Promise<Disbursement[]> => {
-    const response = await axios.get(`${API_URL}/disbursements`);
+    const response = await axios.get(`${API_URL}/loan-accounts/search`);
     return response.data.data;
   },
 

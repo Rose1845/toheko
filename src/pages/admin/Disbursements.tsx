@@ -122,10 +122,12 @@ const Disbursements = () => {
   });
 
   // Queries
-  const { data: disbursements = [], isLoading: isDisbursementsLoading, refetch: refetchDisbursements } = useQuery({
+  const { data: disbursementsData = [], isLoading: isDisbursementsLoading, refetch: refetchDisbursements } = useQuery({
     queryKey: ["disbursements"],
     queryFn: disbursementService.getAllDisbursements,
   });
+const disbursements = disbursementsData?.content || [];
+  console.log('Disbursements data:', disbursements);
 
   const { data: loanApplications = [], isLoading: isLoanApplicationsLoading } = useQuery({
     queryKey: ["loan-applications"],
@@ -441,7 +443,7 @@ const Disbursements = () => {
     {
       header: "ID",
       accessorKey: "id",
-      cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
+      // cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
     },
     {
       header: "Code",
@@ -460,105 +462,105 @@ const Disbursements = () => {
       accessorKey: "amount",
       cell: (row) => (
         <span className="font-medium">
-          KSH {Number(row.getValue()).toLocaleString()}
+          {/* KSH {Number(row.getValue()).toLocaleString()} */}
         </span>
       ),
     },
     {
       header: "Date",
       accessorKey: "disbursementDate",
-      cell: (row) => {
-        const date = row.getValue() as string;
-        return date ? format(new Date(date), "PPP") : "N/A";
-      },
+      // cell: (row) => {
+      //   const date = row.getValue() as string;
+      //   return date ? format(new Date(date), "PPP") : "N/A";
+      // },
     },
     {
       header: "Status",
       accessorKey: "status",
-      cell: (row) => {
-        const status = row.getValue() as string;
-        return (
-          <Badge variant={getStatusVariant(status)}>{status}</Badge>
-        );
-      },
+      // cell: (row) => {
+      //   const status = row.getValue() as string;
+      //   return (
+      //     <Badge variant={getStatusVariant(status)}>{status}</Badge>
+      //   );
+      // },
     },
     {
       header: "Actions",
       id: "actions",
-      cell: ({ row }) => {
-        const disbursement = row.original;
-        const isActive = disbursement.isActive;
-        const status = disbursement.status;
+      // cell: ({ row }) => {
+      //   const disbursement = row.original;
+      //   const isActive = disbursement.isActive;
+      //   const status = disbursement.status;
         
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleViewDetails(disbursement)}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+      //   return (
+      //     <div className="flex items-center gap-2">
+      //       <Button
+      //         variant="ghost"
+      //         size="sm"
+      //         onClick={() => handleViewDetails(disbursement)}
+      //       >
+      //         <Search className="h-4 w-4" />
+      //       </Button>
             
-            {status === "PENDING" && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditDisbursement(disbursement)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleProcessDisbursement(disbursement.id)}
-                  disabled={isProcessLoading}
-                >
-                  {isProcessLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleConfirmDelete(disbursement)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
+      //       {status === "PENDING" && (
+      //         <>
+      //           <Button
+      //             variant="outline"
+      //             size="sm"
+      //             onClick={() => handleEditDisbursement(disbursement)}
+      //           >
+      //             <Edit className="h-4 w-4" />
+      //           </Button>
+      //           <Button
+      //             variant="default"
+      //             size="sm"
+      //             onClick={() => handleProcessDisbursement(disbursement.id)}
+      //             disabled={isProcessLoading}
+      //           >
+      //             {isProcessLoading ? (
+      //               <Loader2 className="h-4 w-4 animate-spin" />
+      //             ) : (
+      //               <CreditCard className="h-4 w-4" />
+      //             )}
+      //           </Button>
+      //           <Button
+      //             variant="destructive"
+      //             size="sm"
+      //             onClick={() => handleConfirmDelete(disbursement)}
+      //           >
+      //             <Trash2 className="h-4 w-4" />
+      //           </Button>
+      //         </>
+      //       )}
 
-            {status === "PROCESSING" && (
-              <>
-                <Button
-                  variant="success"
-                  size="sm"
-                  onClick={() => handleCompleteDisbursement(disbursement)}
-                >
-                  <CheckCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleFailDisbursement(disbursement)}
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCancelDisbursement(disbursement)}
-                >
-                  <Clock className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-          </div>
-        );
-      },
+      //       {status === "PROCESSING" && (
+      //         <>
+      //           <Button
+      //             variant="success"
+      //             size="sm"
+      //             onClick={() => handleCompleteDisbursement(disbursement)}
+      //           >
+      //             <CheckCircle className="h-4 w-4" />
+      //           </Button>
+      //           <Button
+      //             variant="destructive"
+      //             size="sm"
+      //             onClick={() => handleFailDisbursement(disbursement)}
+      //           >
+      //             <XCircle className="h-4 w-4" />
+      //           </Button>
+      //           <Button
+      //             variant="outline"
+      //             size="sm"
+      //             onClick={() => handleCancelDisbursement(disbursement)}
+      //           >
+      //             <Clock className="h-4 w-4" />
+      //           </Button>
+      //         </>
+      //       )}
+      //     </div>
+      //   );
+      // },
     },
   ];
 

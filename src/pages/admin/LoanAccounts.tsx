@@ -1,32 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import DashboardLayout from "@/pages/admin/DashboardLayout";
+import LoanAccountStatsCards from "@/components/dashboard/LoanAccountStatsCards";
 import { loanService } from "@/services/loanService";
 import { memberService } from "@/services/memberService";
 import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
-import DashboardLayout from "@/pages/admin/DashboardLayout";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 const LoanAccounts = () => {
   const [accounts, setAccounts] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [accountStats, setAccountStats] = useState<any>(null);
 
   useEffect(() => {
     const fetchAccountsAndMembers = async () => {
       setLoading(true);
       try {
-        const [accountsResponse, membersResponse] = await Promise.all([
-          loanService.getAllLoanAccounts(page, pageSize),
-          memberService.getAllMembers()
+        const [accountsResponse, membersResponse, statsResponse] = await Promise.all([
+          loanService.getAllLoanAccounts(page, pageSize, ""),
+          memberService.getAllMembers(),
+          loanService.getLoanAccountKpi()
         ]);
         const accountsData = accountsResponse.content || accountsResponse.data?.content || [];
         setAccounts(accountsData);
         setMembers(membersResponse || []);
+        setAccountStats(statsResponse || null);
         // Set total pages if available
         if (accountsResponse.totalPages) setTotalPages(accountsResponse.totalPages);
         else if (accountsResponse.data?.totalPages) setTotalPages(accountsResponse.data.totalPages);
@@ -61,6 +66,37 @@ const LoanAccounts = () => {
     }
   };
 
+  // DataTable columns
+  const columns: Column<any>[] = [
+    { header: "Account No", accessorKey: "accountNo", sortable: true },
+    { header: "Member", accessorKey: "memberId", sortable: true, cell: (acc) => getMemberName(acc.memberId) },
+    { header: "Principal", accessorKey: "principalAmount", sortable: true },
+    { header: "Interest Rate", accessorKey: "interestRate", sortable: true, cell: (acc) => `${acc.interestRate}%` },
+    { header: "Status", accessorKey: "status", sortable: true, cell: (acc) => (
+      <span className={`px-2 py-1 rounded border text-xs font-semibold ${getStatusClass(acc.status)}`}>{acc.status}</span>
+    ) },
+    { header: "Phase", accessorKey: "phase", sortable: true },
+    { header: "Disbursed At", accessorKey: "disbursedAt", sortable: true, cell: (acc) => acc.disbursedAt ? format(new Date(acc.disbursedAt), "dd/MM/yyyy") : "--" },
+    { header: "Maturity Date", accessorKey: "maturityDate", sortable: true },
+  ];
+
+  // Server-side search handler
+  const handleSearch = async (searchValue: string) => {
+    setSearchLoading(true);
+    try {
+      const accountsResponse = await loanService.getAllLoanAccounts(page, pageSize, searchValue);
+      const accountsData = accountsResponse.content || accountsResponse.data?.content || [];
+      setAccounts(accountsData);
+      if (accountsResponse.totalPages) setTotalPages(accountsResponse.totalPages);
+      else if (accountsResponse.data?.totalPages) setTotalPages(accountsResponse.data.totalPages);
+    } catch (error) {
+      // Handle error
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Filter by status
   const filteredAccounts = statusFilter === "ALL"
     ? accounts
     : accounts.filter(acc => acc.status === statusFilter);
@@ -68,80 +104,52 @@ const LoanAccounts = () => {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Loan Accounts
-          </h1>
-          <p className="text-gray-500">
-            View and manage all loan accounts, including disbursed and pending accounts.
-          </p>
+        <div className="mb-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+              Loan Accounts
+            </h1>
+            <p className="text-gray-500">
+              View and manage all loan accounts, including disbursed and pending accounts.
+            </p>
+          </div>
         </div>
+        <LoanAccountStatsCards stats={accountStats} />
         <Card className="shadow-sm">
-          {/* <CardHeader>
-            <CardTitle>Loan Accounts</CardTitle>
-          </CardHeader> */}
+             <CardHeader>
+                <CardTitle>Loan Accounts</CardTitle>
+              </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex justify-center items-center py-8">
-                Loading...
+            <DataTable
+              data={filteredAccounts}
+              columns={columns}
+              keyField="id"
+              pagination={false}
+              searchable={true}
+              pageSize={10}
+              emptyMessage="No loan accounts found"
+              loading={searchLoading}
+              onSearch={handleSearch}
+            />
+            <div className="flex justify-between items-center mt-4">
+              <div>
+                <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
+                  Previous
+                </Button>
+                <span className="mx-2">Page {page} of {totalPages}</span>
+                <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+                  Next
+                </Button>
               </div>
-            ) : filteredAccounts.length === 0 ? (
-              <div className="text-center py-10">No loan accounts found.</div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Account No</TableHead>
-                      <TableHead>Member</TableHead>
-                      <TableHead>Principal</TableHead>
-                      <TableHead>Interest Rate</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Disbursed At</TableHead>
-                      <TableHead>Maturity Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAccounts.map(acc => (
-                      <TableRow key={acc.id}>
-                        <TableCell>{acc.accountNo}</TableCell>
-                        <TableCell>{getMemberName(acc.memberId)}</TableCell>
-                        <TableCell>{acc.principalAmount}</TableCell>
-                        <TableCell>{acc.interestRate}%</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded border text-xs font-semibold ${getStatusClass(acc.status)}`}>
-                            {acc.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{acc.phase}</TableCell>
-                        <TableCell>{acc.disbursedAt ? format(new Date(acc.disbursedAt), "dd/MM/yyyy") : "--"}</TableCell>
-                        <TableCell>{acc.maturityDate}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="flex justify-between items-center mt-4">
-                  <div>
-                    <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                      Previous
-                    </Button>
-                    <span className="mx-2">Page {page} of {totalPages}</span>
-                    <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-                      Next
-                    </Button>
-                  </div>
-                  <div>
-                    <label className="mr-2">Rows per page:</label>
-                    <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="border rounded px-2 py-1">
-                      {[10, 20, 50, 100].map(size => (
-                        <option key={size} value={size}>{size}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </>
-            )}
+              <div>
+                <label className="mr-2">Rows per page:</label>
+                <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="border rounded px-2 py-1">
+                  {[10, 20, 50, 100].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

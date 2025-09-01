@@ -35,5 +35,10 @@ export const memberService = {
   deleteMember: async (memberId: number): Promise<AcknowledgementResponse> => {
     const response = await apiClient.delete(`/api/v1/members/delete?memberId=${memberId}`);
     return response.data;
+  },
+
+  getMemberKpiStats: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/members/member-registration-kpi-history');
+    return response.data;
   }
 };

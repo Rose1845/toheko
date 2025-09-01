@@ -3,26 +3,16 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
 import { loanService } from "@/services/loanService";
-import { LoanApplication, LoanProduct, LoanType } from "@/types/api";
+import { LoanApplication, LoanProduct } from "@/types/api";
 import { format } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +26,7 @@ import LoanApplicationForm from "./loans/LoanApplication";
 import { useForm } from "react-hook-form";
 import LoanDetailsModal from "./LoanDetailsModal";
 import ReviewLoanModal from "./ReviewLoanModal";
+import LoanStatsCards from "@/components/dashboard/LoanStatsCards";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
@@ -60,6 +51,12 @@ const Loans = () => {
   const { toast } = useToast();
   const approveForm = useForm({ defaultValues: { comments: "" } });
   const disburseForm = useForm({ defaultValues: { amount: "", remarks: "" } });
+  const [loanStats, setLoanStats] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const { data: members } = useQuery({
     queryKey: ["members"],
@@ -77,18 +74,20 @@ const Loans = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [loansData, loanTypesData] = await Promise.all([
-          loanService.getAllLoanApplications(),
+        const [loansResponse, loanTypesData] = await Promise.all([
+          loanService.getAllLoanApplications(page, pageSize, search),
           loanService.getAllLoanTypes(),
         ]);
+        const loansData = loansResponse.content || loansResponse.data?.content || [];
         setLoans(loansData);
         setLoanTypes(loanTypesData);
+        if (loansResponse.totalPages) setTotalPages(loansResponse.totalPages);
+        else if (loansResponse.data?.totalPages) setTotalPages(loansResponse.data.totalPages);
       } catch (error) {
         console.error("Error fetching loan data:", error);
         toast({
           title: "Error fetching loan data",
-          description:
-            "There was an error loading the loans information. Please try again.",
+          description: "There was an error loading the loans information. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -97,7 +96,19 @@ const Loans = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, page, pageSize, search]);
+
+  useEffect(() => {
+    const fetchLoanStats = async () => {
+      try {
+        const stats = await loanService.getLoanDashboardSummary();
+        setLoanStats(stats);
+      } catch (error) {
+        // Optionally handle error
+      }
+    };
+    fetchLoanStats();
+  }, []);
 
   const handleViewDetails = (loan: LoanApplication) => {
     setSelectedLoan(loan);
@@ -499,13 +510,19 @@ const Loans = () => {
     <DashboardLayout>
       <div className="container mx-auto py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Loans Management
-          </h1>
-          <p className="text-gray-500">
-            View and manage all loan applications and loan types
-          </p>
+          <div className="mb-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+              Loans Management
+            </h1>
+            <p className="text-gray-500">
+              View and manage all loan applications and loan types
+            </p>
+          </div>
         </div>
+        </div>
+        {/* Loan Stats Cards */}
+        <LoanStatsCards loanStats={loanStats} />
 
         <div className="flex justify-end mb-4">
                <div className="text-center mt-5">
@@ -521,42 +538,51 @@ const Loans = () => {
           <LoanApplicationForm  showForm={showForm} setShowForm={setShowForm} editLoan={editLoan}  />
         </div>
 
-
-
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Loan Applications</CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading Loans...</span>
+                <DataTable
+                  data={loans}
+                  columns={columns}
+                  keyField="loanApplicationId"
+                  pagination={false}
+                  searchable={true}
+                  pageSize={10}
+                  emptyMessage="No loans found"
+                  loading={searchLoading}
+                  onSearch={async (searchValue) => {
+                    setSearchLoading(true);
+                    const [loansResponse] = await Promise.all([
+                      loanService.getAllLoanApplications(page, pageSize, searchValue)
+                    ]);
+                    const loansData = loansResponse.content || loansResponse.data?.content || [];
+                    setLoans(loansData);
+                    if (loansResponse.totalPages) setTotalPages(loansResponse.totalPages);
+                    else if (loansResponse.data?.totalPages) setTotalPages(loansResponse.data.totalPages);
+                    setSearchLoading(false);
+                  }}
+                />
+                <div className="flex justify-between items-center mt-4">
+                  <div>
+                    <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
+                      Previous
+                    </Button>
+                    <span className="mx-2">Page {page} of {totalPages}</span>
+                    <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+                      Next
+                    </Button>
                   </div>
-                ) : loans?.length === 0 ? (
-                  <div className="text-center py-10">
-                    <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">
-                      No loans found
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Get started by applting a new loan.
-                    </p>
+                  <div>
+                    <label className="mr-2">Rows per page:</label>
+                    <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="border rounded px-2 py-1">
+                      {[10, 20, 50, 100].map(size => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
                   </div>
-                ) : (
-                  <DataTable
-                    data={loans}
-                    columns={columns}
-                    keyField="loanApplicationId"
-                    pagination={true}
-                    searchable={true}
-                    pageSize={10}
-                    pageSizeOptions={[5, 10, 25, 50]}
-                    emptyMessage="No loans found"
-                    loading={loading}
-                    // onRowClick={(loan) => handleEdit(saving)}
-                  />
-                )}
+                </div>
               </CardContent>
             </Card>
       
