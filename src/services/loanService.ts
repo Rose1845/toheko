@@ -121,23 +121,14 @@ export const loanService = {
   },
 
   // Loan Applications
-  getAllLoanApplications: async (): Promise<LoanApplication[]> => {
-    try {
-      const response = await apiClient.get('/api/v1/loan-applications/get-all?page=0&size=100');
-      
-      // Check if we have the expected data structure
-      if (response.data && response.data.data && response.data.data.content) {
-        return response.data.data.content;
-      } else if (response.data && response.data.content) {
-        return response.data.content;
-      } else {
-        console.error('Unexpected response structure:', response.data);
-        return [];
-      }
-    } catch (error) {
-      console.error('Error fetching loan applications:', error);
-      return [];
-    }
+  getAllLoanApplications: async (page = 1, size = 10, search = ""): Promise<any> => {
+    const params = new URLSearchParams({
+      page: String(page - 1),
+      size: String(size),
+    });
+    if (search) params.append("search", search);
+    const response = await apiClient.get(`/api/v1/loan-applications/get-all?${params.toString()}`);
+    return response.data;
   },
 
   getAllLoanPenalties: async (): Promise<LoanPenalty[]> => {
@@ -237,8 +228,23 @@ export const loanService = {
     return response.data;
   },
 
-  getAllLoanAccounts: async (page = 1, size = 10): Promise<any> => {
-    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?page=${page - 1}&size=${size}`);
+  getAllLoanAccounts: async (page = 1, size = 10, search = ""): Promise<any> => {
+    const params = new URLSearchParams({
+      page: String(page - 1),
+      size: String(size),
+    });
+    if (search) params.append("search", search);
+    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?${params.toString()}`);
+    return response.data;
+  },
+
+  getLoanDashboardSummary: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/loan-applications/summary-dashboard');
+    return response.data.body;
+  },
+
+  getLoanAccountKpi: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/loan-accounts/admin-loan-account-kpi');
     return response.data;
   }
   

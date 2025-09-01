@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, User, Users, Loader2, X, ChevronLeft } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, User, Users, X, ChevronLeft, BarChart2, UserCheck, UserX, Clock, UserMinus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -63,6 +63,7 @@ const Members = () => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("member");
+  const [kpiStats, setKpiStats] = useState(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -90,10 +91,30 @@ const Members = () => {
   });
 
   const memberMutation = useMutation({
-    mutationFn: (data: Omit<MemberFormValues, "nextOfKins"> & { dateOfBirth: string; status: string }) =>
+    mutationFn: (data: { memberId?: number } & Omit<MemberFormValues, "nextOfKins"> & { dateOfBirth: string; status: string }) =>
       isEditing
-        ? memberService.updateMember(data)
-        : memberService.createMember(data),
+        ? memberService.updateMember({
+            memberId: data.memberId ?? 0,
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            email: data.email!,
+            phoneNumber: data.phoneNumber!,
+            nationalId: data.nationalId!,
+            address: data.address!,
+            dateOfBirth: data.dateOfBirth,
+            status: data.status,
+          })
+        : memberService.createMember({
+            memberId: 0,
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            email: data.email!,
+            phoneNumber: data.phoneNumber!,
+            nationalId: data.nationalId!,
+            address: data.address!,
+            dateOfBirth: data.dateOfBirth,
+            status: data.status,
+          }),
     onSuccess: (data) => {
       if (!isEditing) {
         form.setValue("memberId", data.id);
@@ -336,8 +357,58 @@ const Members = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchKpiStats = async () => {
+      try {
+        const data = await memberService.getMemberKpiStats();
+        setKpiStats(data);
+      } catch (error) {
+        // Optionally handle error
+      }
+    };
+    fetchKpiStats();
+  }, []);
+
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <BarChart2 className="h-8 w-8 text-blue-500" />
+            <div>
+              <div className="text-lg font-bold">{kpiStats?.totalMembers ?? "--"}</div>
+              <div className="text-xs text-blue-700">Total Members</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <UserCheck className="h-8 w-8 text-green-500" />
+            <div>
+              <div className="text-lg font-bold">{kpiStats?.activeMembers ?? "--"}</div>
+              <div className="text-xs text-green-700">Active Members</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Clock className="h-8 w-8 text-yellow-500" />
+            <div>
+              <div className="text-lg font-bold">{kpiStats?.pendingMembers ?? "--"}</div>
+              <div className="text-xs text-yellow-700">Pending Members</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-red-50 to-red-100 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <UserMinus className="h-8 w-8 text-red-500" />
+            <div>
+              <div className="text-lg font-bold">{kpiStats?.suspendedMembers ?? "--"}</div>
+              <div className="text-xs text-red-700">Suspended Members</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
