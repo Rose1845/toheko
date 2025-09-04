@@ -12,6 +12,9 @@ import {
   LogOut,
   User,
   Wallet,
+  History,
+  Building2,
+  TrendingUp,
 } from "lucide-react";
 import { authService } from "@/services/authService";
 import { toast } from "@/components/ui/sonner";
@@ -50,7 +53,10 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
   const menuItems = [
     { label: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/user/dashboard" },
     { label: "Payments", icon: <Wallet size={20} />, path: "/user/payments" },
+    { label: "Payment History", icon: <History size={20} />, path: "/user/payment-history" },
     { label: "Loans", icon: <CreditCard size={20} />, path: "/user/loans" },
+    { label: "Loan Accounts", icon: <Building2 size={20} />, path: "/user/loan-account-history" },
+    { label: "Loan Summary", icon: <TrendingUp size={20} />, path: "/user/loan-application-summary" },
     { label: "Apply for Loan", icon: <FileText size={20} />, path: "/user/loan-application" },
     { label: "Savings", icon: <PiggyBank size={20} />, path: "/user/savings" },
     { label: "Statements", icon: <FileText size={20} />, path: "/user/statements" },
