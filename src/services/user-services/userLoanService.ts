@@ -54,6 +54,15 @@ export interface LoanApplicationRequest {
   status: string;
 }
 
+// Loan Application Status Summary
+export interface LoanApplicationStatusSummary {
+  pending: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+  disbursed: number;
+}
+
 // Loan Application Response
 export interface LoanApplicationResponse {
   responseCode: string;
@@ -213,6 +222,17 @@ export const userLoanService = {
       return response.data;
     } catch (error) {
       console.error('Error adding next of kin:', error);
+      throw error;
+    }
+  },
+
+  // Get loan application status summary
+  getLoanApplicationStatusSummary: async (memberId: number): Promise<LoanApplicationStatusSummary> => {
+    try {
+      const response = await apiClient.get(`/api/v1/loan-applications/status-summary/${memberId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching loan application status summary:', error);
       throw error;
     }
   }
