@@ -121,23 +121,14 @@ export const loanService = {
   },
 
   // Loan Applications
-  getAllLoanApplications: async (): Promise<LoanApplication[]> => {
-    try {
-      const response = await apiClient.get('/api/v1/loan-applications/get-all?page=0&size=100');
-      
-      // Check if we have the expected data structure
-      if (response.data && response.data.data && response.data.data.content) {
-        return response.data.data.content;
-      } else if (response.data && response.data.content) {
-        return response.data.content;
-      } else {
-        console.error('Unexpected response structure:', response.data);
-        return [];
-      }
-    } catch (error) {
-      console.error('Error fetching loan applications:', error);
-      return [];
-    }
+  getAllLoanApplications: async (page = 1, size = 10, search = ""): Promise<any> => {
+    const params = new URLSearchParams({
+      page: String(page - 1),
+      size: String(size),
+    });
+    if (search) params.append("search", search);
+    const response = await apiClient.get(`/api/v1/loan-applications/get-all?${params.toString()}`);
+    return response.data;
   },
 
   getAllLoanPenalties: async (): Promise<LoanPenalty[]> => {
@@ -206,7 +197,55 @@ export const loanService = {
   getLoanGuarantors: async (loanId: number): Promise<LoanGuarantor[]> => {
     const response = await apiClient.get(`/api/v1/loan-guarantors/getAll?loanId=${loanId}`);
     return response.data.data.content;
-  }
+  },
 
+  /**
+   * Submit a loan approval or rejection decision
+   * @param decisionData {object} - { loanApplicationId, decision, comments }
+   * @returns {Promise<AcknowledgementResponse>}
+   */
+  submitLoanApprovalDecision: async (decisionData: {
+    applicationId: number;
+    decision: 'APPROVE' | 'REJECT';
+    comments?: string;
+    approverType?: string;
+    approverUserId?: number;
+  }): Promise<AcknowledgementResponse> => {
+    const response = await apiClient.post(
+      '/api/v1/loan-applications-approvals/decisions',
+      decisionData
+    );
+    return response.data;
+  },
+
+  fetchLoanAccountByApplicationId: async (loanApplicationId: number) => {
+    const response = await apiClient.get(`/api/v1/loan-accounts/fetch-loan-applicationId/${loanApplicationId}`);
+    return response.data;
+  },
+
+  disburseLoanAccount: async (payload: { loanAccountId: number; amount: number; remarks: string }) => {
+    const response = await apiClient.post('/api/v1/loan-accounts/disburse', payload);
+    return response.data;
+  },
+
+  getAllLoanAccounts: async (page = 1, size = 10, search = ""): Promise<any> => {
+    const params = new URLSearchParams({
+      page: String(page - 1),
+      size: String(size),
+    });
+    if (search) params.append("search", search);
+    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?${params.toString()}`);
+    return response.data;
+  },
+
+  getLoanDashboardSummary: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/loan-applications/summary-dashboard');
+    return response.data.body;
+  },
+
+  getLoanAccountKpi: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/loan-accounts/admin-loan-account-kpi');
+    return response.data;
+  }
   
 };

@@ -65,7 +65,7 @@ const ApproveAndGenerateRepayment = ({
       toast({
         title: "Loan Approved",
         description: "The loan has been approved successfully.",
-      });
+        variant: "default",});
     } catch (error) {
       console.error("Error approving loan:", error);
       toast({

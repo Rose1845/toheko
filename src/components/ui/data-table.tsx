@@ -49,11 +49,11 @@ export interface DataTableProps<T> {
   pageSizeOptions?: number[];
   loading?: boolean;
   emptyMessage?: string;
+  onSearch?: (searchTerm: string) => void;
   onSearchChange?: (searchTerm: string) => void;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
   totalRecords?: number;
-
   onRowClick?: (row: T) => void;
 }
 
@@ -70,6 +70,7 @@ export function DataTable<T>({
   loading = false,
   emptyMessage = "No data available",
   onRowClick,
+  onSearch, // <-- Added
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -183,7 +184,10 @@ export function DataTable<T>({
             <Input
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (onSearch) onSearch(e.target.value); // <-- Call parent handler
+              }}
               className="pl-8"
             />
           </div>

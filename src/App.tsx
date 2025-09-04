@@ -49,6 +49,7 @@ import UserSettings from "./pages/user/Settings";
 import LoanApplication from "./pages/user/LoanApplication";
 import Users from "./pages/admin/Users";
 import GroupDetails from "./pages/admin/GroupDetails";
+import LoanAccounts from "./pages/admin/LoanAccounts";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +123,7 @@ const App = () => (
             <Route path="/admin/roles" element={<Roles />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/notifications" element={<Notifications />} />
+            <Route path="/admin/loan-accounts" element={<LoanAccounts />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

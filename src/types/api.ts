@@ -257,6 +257,8 @@ export interface Member {
   suspensionReason: string | null;
   suspendedAt: string | null;
   reactivatedAt: string | null;
+  nextOfKins?: NextOfKin[]; 
+
 }
 
 export interface Account extends BaseEntityAudit {
