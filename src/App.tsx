@@ -38,7 +38,10 @@ import NotFound from "./pages/NotFound";
 import UserDashboardLayout from "./pages/user/layout/UserDashboardLayout";
 import UserDashboard from "./pages/user/Dashboard";
 import UserPayments from "./pages/user/Payments";
+import PaymentHistory from "./pages/user/PaymentHistory";
 import UserLoans from "./pages/user/Loans";
+import LoanAccountHistory from "./pages/user/LoanAccountHistory";
+import LoanApplicationSummary from "./pages/user/LoanApplicationSummary";
 import UserSavings from "./pages/user/Savings";
 import UserStatements from "./pages/user/Statements";
 import UserProfile from "./pages/user/Profile";
@@ -64,7 +67,10 @@ const App = () => (
           <Route path="/user" element={<ProtectedRoute />}>
             <Route path="dashboard" element={<UserDashboard />} />
             <Route path="payments" element={<UserPayments />} />
+            <Route path="payment-history" element={<PaymentHistory />} />
             <Route path="loans" element={<UserLoans />} />
+            <Route path="loan-account-history" element={<LoanAccountHistory />} />
+            <Route path="loan-application-summary" element={<LoanApplicationSummary />} />
             <Route path="loan-application" element={<LoanApplication />} />
             <Route path="savings" element={<UserSavings />} />
             <Route path="statements" element={<UserStatements />} />
