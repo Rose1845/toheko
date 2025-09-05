@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
-import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -278,7 +278,8 @@ const LoanApplicationForm: React.FC<LoanApplicationFormProps> = ({ showForm, set
               termDays: data.termDays,
               guarantors: [],
               nextOfKin: [],
-              collateral: []
+              collateral: [],
+              mobileNumber: ''
             });
             break;
 

@@ -197,6 +197,7 @@ export interface LoanApplication {
   applicantIdNo: number | string;
   memberId: number;
   name: string;
+  mobileNumber: string | number | null
   amount: number;
   termDays: number;
   guarantors: LoanGuarantor[];

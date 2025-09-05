@@ -60,8 +60,9 @@ const Repayments = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+         const params = { page: 0, size: 20};       
         const [loansData, loanTypesData] = await Promise.all([
-          loanService.getAllLoanApplications(),
+          loanService.getAllLoanApplications(params),
           loanService.getAllLoanTypes(),
         ]);
         setLoans(loansData);
@@ -114,7 +115,8 @@ const Repayments = () => {
         description: "The loan has been successfully approved.",
       });
       // Refresh loans
-      const updatedLoans = await loanService.getAllLoanApplications();
+      const params = { page: 0 };      
+      const updatedLoans = await loanService.getAllLoanApplications(params);
       setLoans(updatedLoans);
     } catch (error) {
       console.error("Error approving loan:", error);
@@ -551,7 +553,9 @@ const Repayments = () => {
                   }
                   setShowForm(false);
                   setLoading(true); // Refresh
-                  const data = await loanService.getAllLoanApplications();
+                  const params = { page: 0, size: 20 };
+                  
+                  const data = await loanService.getAllLoanApplications(params);
                   setLoans(data);
                 } catch (error) {
                   toast({
