@@ -134,17 +134,7 @@ const disbursements = disbursementsData?.content || [];
     queryFn: loanService.getAllLoanApplications,
   });
 
-  const { data: members = [], isLoading: isMembersLoading } = useQuery({
-    queryKey: ["members"],
-    queryFn: memberService.getAllMembers,
-  });
 
-  // Helper function to get member name
-  const getMemberName = (memberId: number) => {
-    const member = members?.find((m) => m.memberId === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : "Unknown";
-  };
-  
   // Helper to get loan application by ID
   const getLoanApplication = (id: number): LoanApplication | undefined => {
     return loanApplications.find(loan => loan.id === id);
@@ -441,10 +431,10 @@ const disbursements = disbursementsData?.content || [];
   // DataTable column definitions
   const columns: Column<any>[] = [
     { header: "ID", accessorKey: "id", sortable: true },
-    { header: "Member ID", accessorKey: "memberId", sortable: true },
-    { header: "Loan Account ID", accessorKey: "loanAccountId", sortable: true },
-    { header: "Loan Application ID", accessorKey: "loanApplicationId", sortable: true },
-    { header: "Phone", accessorKey: "msisdn", cell: (row) => row.msisdn || "--" },
+    { header: "Member ID", accessorKey: "memberName", sortable: true },
+    { header: "Loan Account No", accessorKey: "accountNo", sortable: true },
+    { header: "Loan Application", accessorKey: "loanApplicationCode", sortable: true },
+    { header: "Phone", accessorKey: "msisdnMasked", cell: (row) => row.msisdnMasked || "--" },
     { header: "Amount", accessorKey: "amount", sortable: true },
     { header: "Channel", accessorKey: "channel", sortable: true },
     { header: "Status", accessorKey: "status", sortable: true },

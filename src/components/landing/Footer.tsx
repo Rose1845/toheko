@@ -12,7 +12,9 @@ const Footer = () => {
                 T
               </div>
               <span className="text-xl font-display font-semibold text-white">
-                Toheko SACCO
+                SACCO
+                                {/* Toheko SACCO */}
+
               </span>
             </div>
             <p className="text-gray-400 mb-6">
@@ -214,7 +216,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-12 pt-8">
           <p className="text-center text-gray-400">
-            &copy; {new Date().getFullYear()} Toheko SACCO. All rights reserved.
+            &copy; {new Date().getFullYear()}  SACCO. All rights reserved.
           </p>
         </div>
       </div>

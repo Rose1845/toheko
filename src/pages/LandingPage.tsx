@@ -14,10 +14,10 @@ const LandingPage = () => {
       <Navbar />
       <main>
         <HeroSection />
-        <ServicesSection />
+        {/* <ServicesSection />
         <AboutSection />
         <TestimonialsSection />
-        <ContactSection />
+        <ContactSection /> */}
       </main>
       <Footer />
     </div>

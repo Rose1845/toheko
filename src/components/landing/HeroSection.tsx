@@ -12,7 +12,7 @@ const HeroSection = () => {
               Financial Growth Through Community Savings
             </h1>
             <p className="text-gray-700 text-lg md:text-xl">
-              Join Toheko SACCO today and experience the power of collaborative
+              Join SACCO today and experience the power of collaborative
               saving and investment for a brighter financial future.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
