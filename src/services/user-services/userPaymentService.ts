@@ -35,6 +35,7 @@ export interface PaymentRequest {
   modeOfPaymentId: number;
   phoneNumber: string;
   remarks?: string;
+  externalRef?: string; // Optional external reference from M-PESA STK push
 }
 
 export interface STKPushRequest {

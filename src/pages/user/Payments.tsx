@@ -54,7 +54,6 @@ const Payments = () => {
   const [stkResponse, setStkResponse] = useState<STKPushResponse | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'completed' | 'failed' | null>(null);
   const [statusCheckTimeout, setStatusCheckTimeout] = useState<NodeJS.Timeout | null>(null);
-  const paymentCheckDuration = 10000; // Wait 10 seconds before directing to payment history
 
   // Fetch accounts when component mounts
   useEffect(() => {
@@ -197,21 +196,78 @@ const Payments = () => {
     return cleaned;
   };
 
-  // Function to wait 10 seconds then direct user to payment history
+  // Function to create payment records 3 times using externalRef within 15 seconds
   const checkPaymentStatus = async (externalRef: string): Promise<void> => {
     try {
       setPaymentStatus('checking');
-      console.log(`Payment initiated with external reference: ${externalRef}`);
+      console.log(`🔄 Starting payment creation process with external reference: ${externalRef}`);
 
-      // Wait 10 seconds then complete
-      const timeout = setTimeout(() => {
+      const userId = getUserId();
+      if (!userId) {
+        console.error('User ID not found');
         setPaymentStatus('completed');
         toast.success('Payment initiated! Please check your payment history to view the final status.');
-      }, paymentCheckDuration);
+        return;
+      }
 
-      setStatusCheckTimeout(timeout);
+      // Prepare payment creation data using externalRef
+      const paymentData = {
+        amount: Number(amount),
+        accountId: selectedAccount!.accountId,
+        paymentTypeId: selectedPaymentType!.paymentTypeId,
+        modeOfPaymentId: selectedPaymentMode!.modeOfPaymentId,
+        phoneNumber: phoneNumber,
+        remarks: remarks || 'Payment via member portal',
+        externalRef: externalRef // Use the externalRef from STK push
+      };
+
+      let attemptCount = 0;
+      const maxAttempts = 3;
+      const attemptInterval = 5000; // 5 seconds between attempts (3 attempts in 15 seconds)
+
+      const createPaymentRecord = async () => {
+        try {
+          attemptCount++;
+          console.log(`📤 Payment creation attempt ${attemptCount}/${maxAttempts} with externalRef: ${externalRef}`);
+
+          // Create payment record using the /api/v1/payments endpoint
+          const paymentResponse = await userPaymentService.createPayment(paymentData);
+          console.log(`✅ Payment creation attempt ${attemptCount} response:`, paymentResponse);
+
+        } catch (error) {
+          console.error(`❌ Error in payment creation attempt ${attemptCount}:`, error);
+        }
+      };
+
+      // Perform first attempt immediately
+      console.log('🚀 Starting attempt 1 immediately...');
+      await createPaymentRecord();
+
+      // Schedule second attempt after 5 seconds
+      console.log('⏰ Scheduling attempt 2 in 5 seconds...');
+      const secondAttemptTimeout = setTimeout(async () => {
+        console.log('🚀 Starting attempt 2...');
+        await createPaymentRecord();
+
+        // Schedule third attempt after another 5 seconds (total 10 seconds)
+        console.log('⏰ Scheduling attempt 3 in 5 seconds...');
+        const thirdAttemptTimeout = setTimeout(async () => {
+          console.log('🚀 Starting attempt 3 (final)...');
+          await createPaymentRecord();
+
+          // After all 3 attempts, complete the process and direct user to payment history
+          console.log('✅ All 3 payment creation attempts completed!');
+          setPaymentStatus('completed');
+          toast.success('Payment processing complete! Please check your payment history to view the final status.');
+        }, attemptInterval);
+
+        setStatusCheckTimeout(thirdAttemptTimeout);
+      }, attemptInterval);
+
+      setStatusCheckTimeout(secondAttemptTimeout);
+
     } catch (error) {
-      console.error('Error in payment status check:', error);
+      console.error('Error in payment creation process:', error);
       setPaymentStatus('completed');
       toast.success('Payment initiated! Please check your payment history to view the final status.');
     }
@@ -283,27 +339,7 @@ const Payments = () => {
     setIsLoading(true);
 
     try {
-      // Step 1: Create payment
-      const paymentData = {
-        amount: Number(amount),
-        accountId: selectedAccount.accountId,
-        paymentTypeId: selectedPaymentType.paymentTypeId,
-        modeOfPaymentId: selectedPaymentMode.modeOfPaymentId,
-        phoneNumber: formattedPhoneNumber,
-        remarks: remarks || 'Payment via member portal'
-      };
-
-      // Create the payment record and get the requestID
-      const paymentResponse = await userPaymentService.createPayment(paymentData);
-      console.log('Payment created:', paymentResponse);
-
-      // Extract the requestID from the payment response
-      const paymentRequestId = paymentResponse.requestID;
-
-      // Store the payment reference for the success screen
-      setPaymentReference(paymentRequestId);
-
-      // Step 2: If M-PESA selected, initiate STK push using the requestID as paymentReference
+      // Step 1: If M-PESA selected, initiate STK push first to get externalRef
       if (selectedPaymentMode.name.toLowerCase().includes('m-pesa')) {
         const userId = getUserId();
         if (!userId) {
@@ -317,7 +353,7 @@ const Payments = () => {
           phoneNumber: formattedPhoneNumber,
           remarks: remarks || 'Payment via member portal',
           app: 'TOHEKO', // Always use "TOHEKO" as the app name
-          paymentReference: paymentRequestId, // Use the requestID from payment creation as paymentReference
+          paymentReference: `TEMP_${Date.now()}`, // Temporary reference, will use externalRef for actual payment
           memberId: userId // Use userId from JWT token
         };
 
@@ -332,6 +368,9 @@ const Payments = () => {
         if (stkResponse.responseCode === '200' && stkResponse.stkAccepted) {
           toast.success('Payment initiated! Check your phone for M-PESA prompt.');
           setPaymentStatus('pending');
+
+          // Store the externalRef as payment reference for display
+          setPaymentReference(stkResponse.externalRef || 'N/A');
 
           // Start checking payment status if we have an externalRef
           if (stkResponse.externalRef) {
@@ -349,6 +388,18 @@ const Payments = () => {
           return;
         }
       } else {
+        // For non-M-PESA payments, create payment record directly
+        const paymentData = {
+          amount: Number(amount),
+          accountId: selectedAccount.accountId,
+          paymentTypeId: selectedPaymentType.paymentTypeId,
+          modeOfPaymentId: selectedPaymentMode.modeOfPaymentId,
+          phoneNumber: formattedPhoneNumber,
+          remarks: remarks || 'Payment via member portal'
+        };
+
+        const paymentResponse = await userPaymentService.createPayment(paymentData);
+        setPaymentReference(paymentResponse.requestID);
         toast.success('Payment recorded successfully!');
         setPaymentStatus('completed');
       }
@@ -735,10 +786,10 @@ const Payments = () => {
                 <div className="mt-3 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0"></div>
-                    <p className="text-xs sm:text-sm text-blue-700 font-medium">Verifying Payment</p>
+                    <p className="text-xs sm:text-sm text-blue-700 font-medium">Processing Payment</p>
                   </div>
                   <p className="text-xs text-blue-600">
-                    We're checking with M-PESA to confirm your payment. After verification, we'll direct you to view your payment history for the final status.
+                    We're submitting your payment record to the system (3 attempts over 15 seconds). After all attempts are complete, please check your payment history for the final status.
                   </p>
                 </div>
               )}
