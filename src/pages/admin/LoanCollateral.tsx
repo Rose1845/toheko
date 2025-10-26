@@ -257,9 +257,9 @@ const LoanCollateral = () => {
       sortable: true,
       cell: (LoanPenalty) => (
         <span className="font-medium">
-          {new Intl.NumberFormat('en-US', {
+          {new Intl.NumberFormat('en-KE', {
             style: 'currency',
-            currency: 'USD'
+            currency: 'KES'
           }).format(LoanPenalty.estimatedValue)}
         </span>
       ),

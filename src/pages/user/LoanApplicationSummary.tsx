@@ -131,35 +131,38 @@ const LoanApplicationSummary = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-2xl font-semibold">Loan Application Summary</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-lg sm:text-2xl font-semibold">Loan Application Summary</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Overview of your loan applications and their current status
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={fetchStatusSummary}
               disabled={loading}
+              className="text-xs w-full sm:w-auto"
             >
               {loading ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-2" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               )}
               Refresh
             </Button>
             <Button
               size="sm"
               onClick={() => navigate('/user/loan-application')}
+              className="text-xs w-full sm:w-auto"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Apply for Loan
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              <span className="hidden sm:inline">Apply for Loan</span>
+              <span className="sm:hidden">Apply</span>
             </Button>
           </div>
         </div>
@@ -179,24 +182,24 @@ const LoanApplicationSummary = () => {
             </CardContent>
           </Card>
         ) : statusSummary ? (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Total Summary Card */}
             <Card className="border-2 border-primary/20">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Total Applications Overview
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   You have submitted a total of {getTotalApplications()} loan applications
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary mb-2">
+                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">
                     {getTotalApplications()}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Total Loan Applications
                   </p>
                 </div>
@@ -204,7 +207,7 @@ const LoanApplicationSummary = () => {
             </Card>
 
             {/* Status Breakdown */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
               {statusConfig.map((config) => {
                 const Icon = config.icon;
                 const count = statusSummary[config.key];
@@ -214,19 +217,19 @@ const LoanApplicationSummary = () => {
                     key={config.key}
                     className={`${config.borderColor} border-2 ${config.bgColor} hover:shadow-md transition-shadow`}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <Icon className={`h-6 w-6 ${config.color}`} />
-                        <Badge variant={config.badgeVariant} className="text-xs">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${config.color}`} />
+                        <Badge variant={config.badgeVariant} className="text-[10px] sm:text-xs">
                           {config.label}
                         </Badge>
                       </div>
-                      
+
                       <div className="text-center">
-                        <div className={`text-2xl font-bold ${config.color} mb-1`}>
+                        <div className={`text-xl sm:text-2xl font-bold ${config.color} mb-1`}>
                           {count}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {config.label}
                         </p>
                       </div>

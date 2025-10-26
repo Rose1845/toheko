@@ -316,7 +316,7 @@ const Accounts = () => {
   
   // Format currency
   const formatCurrency = (amount: number) => {
-    return `KSH ${amount.toLocaleString()}`;
+    return `KES ${amount.toLocaleString()}`;
   };
   
   // Define columns for the accounts DataTable

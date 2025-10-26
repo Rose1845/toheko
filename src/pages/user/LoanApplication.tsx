@@ -10,15 +10,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/components/ui/sonner';
 import { ArrowRight, ArrowLeft, CheckCircle, CreditCard, User, Shield, FileText, Plus, Trash2 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
-import { 
-  userLoanService, 
-  LoanProduct, 
+import {
+  userLoanService,
+  LoanProduct,
   LoanApplicationRequest,
   GuarantorRequest,
   CollateralRequest,
   NextOfKinRequest,
   LoanApplicationResponse
 } from '@/services/user-services/userLoanService';
+import { userMemberService, MemberDetails } from '@/services/user-services/userMemberService';
 
 // JWT token interface
 interface TohekoJwtPayload {
@@ -43,20 +44,15 @@ const LoanApplication = () => {
   const [loanApplicationId, setLoanApplicationId] = useState<number | null>(null);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false); // Track if main application is submitted
   const [showConfirmationModal, setShowConfirmationModal] = useState(false); // Track confirmation modal state
+  const [memberDetails, setMemberDetails] = useState<MemberDetails | null>(null);
+  const [loadingMemberDetails, setLoadingMemberDetails] = useState(false);
   
-  // Application form data
+  // Application form data (only fields shown in UI)
   const [applicationForm, setApplicationForm] = useState({
     amount: '',
     termDays: '',
-    firstName: '',
-    lastName: '',
-    middleName: '',
-    email: '',
     mobileNumber: '',
-    address: '',
     occupation: '',
-    dob: '',
-    gender: '',
     loanPurpose: '',
     groupId: 0
   });
@@ -75,21 +71,15 @@ const LoanApplication = () => {
     setApplicationForm({
       amount: '',
       termDays: '',
-      firstName: '',
-      lastName: '',
-      middleName: '',
-      email: '',
       mobileNumber: '',
-      address: '',
       occupation: '',
-      dob: '',
-      gender: '',
       loanPurpose: '',
       groupId: 0
     });
     setGuarantors([]);
     setCollaterals([]);
     setNextOfKin([]);
+    setMemberDetails(null); // Reset member details too
   };
 
   // Fetch loan products when component mounts
@@ -110,17 +100,47 @@ const LoanApplication = () => {
     fetchLoanProducts();
   }, []);
 
+  // Fetch member details when component mounts or when reaching step 2
+  useEffect(() => {
+    if (currentStep === 2 && !memberDetails && !loadingMemberDetails) {
+      fetchMemberDetails();
+    }
+  }, [currentStep, memberDetails, loadingMemberDetails]);
+
   // Get user ID from JWT token
   const getUserId = (): number | null => {
     const token = localStorage.getItem('token');
     if (!token) return null;
-    
+
     try {
       const decoded = jwtDecode<TohekoJwtPayload>(token);
       return decoded.userId;
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;
+    }
+  };
+
+  // Fetch member details for background use
+  const fetchMemberDetails = async () => {
+    const userId = getUserId();
+    if (!userId) return;
+
+    try {
+      setLoadingMemberDetails(true);
+      const details = await userMemberService.getMemberDetails(userId);
+      setMemberDetails(details);
+
+      // Only populate the mobile number field (which remains editable)
+      setApplicationForm(prev => ({
+        ...prev,
+        mobileNumber: details.phoneNumber || ''
+      }));
+    } catch (error) {
+      console.error('Error fetching member details:', error);
+      toast.error('Failed to load member details');
+    } finally {
+      setLoadingMemberDetails(false);
     }
   };
 
@@ -133,17 +153,17 @@ const LoanApplication = () => {
     
     if (currentStep === 2) {
       if (!applicationForm.amount || Number(applicationForm.amount) < selectedLoanProduct!.minAmount || Number(applicationForm.amount) > selectedLoanProduct!.maxAmount) {
-        toast.error(`Amount must be between ${selectedLoanProduct!.minAmount} and ${selectedLoanProduct!.maxAmount}`);
+        toast.error(`Amount must be between KES ${selectedLoanProduct!.minAmount} and KES ${selectedLoanProduct!.maxAmount}`);
         return;
       }
-      
+
       if (!applicationForm.termDays || Number(applicationForm.termDays) < selectedLoanProduct!.minTermDays || Number(applicationForm.termDays) > selectedLoanProduct!.maxTermDays) {
         toast.error(`Term must be between ${selectedLoanProduct!.minTermDays} and ${selectedLoanProduct!.maxTermDays} days`);
         return;
       }
 
-      if (!applicationForm.firstName || !applicationForm.lastName || !applicationForm.email || !applicationForm.mobileNumber) {
-        toast.error('Please fill in all required fields');
+      if (!applicationForm.mobileNumber || !applicationForm.occupation || !applicationForm.loanPurpose) {
+        toast.error('Please fill in all required fields (marked with *)');
         return;
       }
     }
@@ -254,17 +274,17 @@ const LoanApplication = () => {
         applicationNo: `LA-${Date.now()}`, // Generate application number
         memberId: userId,
         amount: Number(applicationForm.amount),
-        firstName: applicationForm.firstName,
-        lastName: applicationForm.lastName,
-        middleName: applicationForm.middleName,
+        firstName: memberDetails?.firstName || '',
+        lastName: memberDetails?.lastName || '',
+        middleName: memberDetails?.otherNames || '',
         termDays: Number(applicationForm.termDays),
-        email: applicationForm.email,
+        email: memberDetails?.email || '',
         groupId: applicationForm.groupId,
         mobileNumber: applicationForm.mobileNumber,
-        address: applicationForm.address,
+        address: memberDetails?.address || '',
         occupation: applicationForm.occupation,
-        dob: applicationForm.dob,
-        gender: applicationForm.gender,
+        dob: memberDetails?.dob || '',
+        gender: memberDetails?.gender || '',
         loanPurpose: applicationForm.loanPurpose,
         status: 'PENDING'
       };
@@ -463,7 +483,7 @@ const LoanApplication = () => {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-muted-foreground">Amount: </span>
-                            <span>${applicationForm.amount}</span>
+                            <span>KES {applicationForm.amount}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Term: </span>
@@ -543,7 +563,7 @@ const LoanApplication = () => {
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               <div>
                                 <span className="text-muted-foreground">Amount: </span>
-                                <span>${product.minAmount} - ${product.maxAmount}</span>
+                                <span>KES {product.minAmount} - KES {product.maxAmount}</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Interest: </span>
@@ -551,7 +571,7 @@ const LoanApplication = () => {
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Term: </span>
-                                <span>{product.minTermDays} - ${product.maxTermDays} days</span>
+                                <span>{product.minTermDays} - {product.maxTermDays} days</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Code: </span>
@@ -615,7 +635,7 @@ const LoanApplication = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <span className="text-muted-foreground">Loan Amount: </span>
-                          <span className="font-medium">${applicationForm.amount}</span>
+                          <span className="font-medium">KES {applicationForm.amount}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Term: </span>
@@ -626,11 +646,11 @@ const LoanApplication = () => {
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <span className="text-muted-foreground">Name: </span>
-                          <span className="font-medium">{applicationForm.firstName} {applicationForm.middleName} {applicationForm.lastName}</span>
+                          <span className="font-medium">{memberDetails?.firstName} {memberDetails?.otherNames} {memberDetails?.lastName}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Email: </span>
-                          <span className="font-medium">{applicationForm.email}</span>
+                          <span className="font-medium">{memberDetails?.email}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Phone: </span>
@@ -657,13 +677,21 @@ const LoanApplication = () => {
               ) : (
                 // Show editable form when application is not submitted yet
                 <div className="grid gap-4">
+                  {loadingMemberDetails && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                        <p className="text-sm text-blue-800">Loading your member details...</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="amount">Loan Amount</Label>
                       <Input
                         id="amount"
                         type="number"
-                        placeholder={`${selectedLoanProduct?.minAmount} - ${selectedLoanProduct?.maxAmount}`}
+                        placeholder={`KES ${selectedLoanProduct?.minAmount} - KES ${selectedLoanProduct?.maxAmount}`}
                         value={applicationForm.amount}
                         onChange={(e) => setApplicationForm({...applicationForm, amount: e.target.value})}
                       />
@@ -680,102 +708,42 @@ const LoanApplication = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        value={applicationForm.firstName}
-                        onChange={(e) => setApplicationForm({...applicationForm, firstName: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="middleName">Middle Name</Label>
-                      <Input
-                        id="middleName"
-                        value={applicationForm.middleName}
-                        onChange={(e) => setApplicationForm({...applicationForm, middleName: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        value={applicationForm.lastName}
-                        onChange={(e) => setApplicationForm({...applicationForm, lastName: e.target.value})}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={applicationForm.email}
-                        onChange={(e) => setApplicationForm({...applicationForm, email: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="mobileNumber">Mobile Number</Label>
-                      <Input
-                        id="mobileNumber"
-                        value={applicationForm.mobileNumber}
-                        onChange={(e) => setApplicationForm({...applicationForm, mobileNumber: e.target.value})}
-                      />
-                    </div>
-                  </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={applicationForm.address}
-                      onChange={(e) => setApplicationForm({...applicationForm, address: e.target.value})}
+                    <Label htmlFor="mobileNumber">Mobile Number *</Label>
+                    <Input
+                      id="mobileNumber"
+                      value={applicationForm.mobileNumber}
+                      onChange={(e) => setApplicationForm({...applicationForm, mobileNumber: e.target.value})}
+                      placeholder={loadingMemberDetails ? "Loading..." : "Enter mobile number (254XXXXXXXXX)"}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {memberDetails ? "Pre-filled from your profile, you can edit if needed" : "Enter your mobile number"}
+                    </p>
+                  </div>
+
+
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="occupation">Occupation *</Label>
+                    <Input
+                      id="occupation"
+                      value={applicationForm.occupation}
+                      onChange={(e) => setApplicationForm({...applicationForm, occupation: e.target.value})}
+                      placeholder="Enter your occupation"
+                      required
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="occupation">Occupation</Label>
-                      <Input
-                        id="occupation"
-                        value={applicationForm.occupation}
-                        onChange={(e) => setApplicationForm({...applicationForm, occupation: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="dob">Date of Birth</Label>
-                      <Input
-                        id="dob"
-                        type="date"
-                        value={applicationForm.dob}
-                        onChange={(e) => setApplicationForm({...applicationForm, dob: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select value={applicationForm.gender} onValueChange={(value) => setApplicationForm({...applicationForm, gender: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   <div className="grid gap-2">
-                    <Label htmlFor="loanPurpose">Loan Purpose</Label>
+                    <Label htmlFor="loanPurpose">Loan Purpose *</Label>
                     <Textarea
                       id="loanPurpose"
                       placeholder="Describe the purpose of this loan"
                       value={applicationForm.loanPurpose}
                       onChange={(e) => setApplicationForm({...applicationForm, loanPurpose: e.target.value})}
+                      required
                     />
                   </div>
                 </div>
@@ -1095,7 +1063,7 @@ const LoanApplication = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Amount:</span>
-                      <span className="font-medium">${applicationForm.amount}</span>
+                      <span className="font-medium">KES {applicationForm.amount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Term:</span>
@@ -1158,11 +1126,11 @@ const LoanApplication = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold">Apply for Loan</h1>
-            <p className="text-sm text-muted-foreground">Complete the steps below to apply for a loan</p>
+            <h1 className="text-lg sm:text-xl font-semibold">Apply for Loan</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Complete the steps below to apply for a loan</p>
           </div>
         </div>
         
@@ -1203,23 +1171,23 @@ const LoanApplication = () => {
 
         {/* Confirmation Modal for Application Submission */}
         <AlertDialog open={showConfirmationModal} onOpenChange={setShowConfirmationModal}>
-          <AlertDialogContent className="max-w-2xl">
+          <AlertDialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
+              <AlertDialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Confirm Loan Application Submission
               </AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className="text-xs sm:text-sm">
                 Please review your application details before submission. Once submitted, you cannot modify these details.
               </AlertDialogDescription>
             </AlertDialogHeader>
             
-            <div className="py-4">
-              <div className="space-y-4">
+            <div className="py-2 sm:py-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Loan Product Information */}
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <h3 className="font-semibold text-sm mb-3 text-primary">Loan Product</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                  <h3 className="font-semibold text-xs sm:text-sm mb-2 sm:mb-3 text-primary">Loan Product</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div>
                       <span className="text-muted-foreground">Product: </span>
                       <span className="font-medium">{selectedLoanProduct?.name}</span>
@@ -1232,18 +1200,18 @@ const LoanApplication = () => {
                 </div>
 
                 {/* Loan Details */}
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <h3 className="font-semibold text-sm mb-3 text-primary">Loan Details</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                  <h3 className="font-semibold text-xs sm:text-sm mb-2 sm:mb-3 text-primary">Loan Details</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div>
                       <span className="text-muted-foreground">Amount: </span>
-                      <span className="font-medium">${applicationForm.amount}</span>
+                      <span className="font-medium">KES {applicationForm.amount}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Term: </span>
                       <span className="font-medium">{applicationForm.termDays} days</span>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <span className="text-muted-foreground">Purpose: </span>
                       <span className="font-medium">{applicationForm.loanPurpose || 'Not specified'}</span>
                     </div>
@@ -1251,16 +1219,16 @@ const LoanApplication = () => {
                 </div>
 
                 {/* Personal Information */}
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <h3 className="font-semibold text-sm mb-3 text-primary">Personal Information</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
+                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                  <h3 className="font-semibold text-xs sm:text-sm mb-2 sm:mb-3 text-primary">Personal Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+                    <div className="sm:col-span-2">
                       <span className="text-muted-foreground">Name: </span>
-                      <span className="font-medium">{applicationForm.firstName} {applicationForm.middleName} {applicationForm.lastName}</span>
+                      <span className="font-medium">{memberDetails?.firstName} {memberDetails?.otherNames} {memberDetails?.lastName}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Email: </span>
-                      <span className="font-medium">{applicationForm.email}</span>
+                      <span className="font-medium">{memberDetails?.email}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Phone: </span>
@@ -1268,39 +1236,39 @@ const LoanApplication = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Gender: </span>
-                      <span className="font-medium">{applicationForm.gender || 'Not specified'}</span>
+                      <span className="font-medium">{memberDetails?.gender || 'Not specified'}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Date of Birth: </span>
-                      <span className="font-medium">{applicationForm.dob || 'Not specified'}</span>
+                      <span className="font-medium">{memberDetails?.dob || 'Not specified'}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Occupation: </span>
                       <span className="font-medium">{applicationForm.occupation || 'Not specified'}</span>
                     </div>
                   </div>
-                  {applicationForm.address && (
-                    <div className="mt-3">
-                      <span className="text-muted-foreground text-sm">Address: </span>
-                      <span className="font-medium text-sm">{applicationForm.address}</span>
+                  {memberDetails?.address && (
+                    <div className="mt-2 sm:mt-3">
+                      <span className="text-muted-foreground text-xs sm:text-sm">Address: </span>
+                      <span className="font-medium text-xs sm:text-sm">{memberDetails.address}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Additional Requirements */}
                 {(selectedLoanProduct?.requiresGuarantor || selectedLoanProduct?.requiresCollateral || selectedLoanProduct?.requiresNextOfKin) && (
-                  <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-                    <h3 className="font-semibold text-sm mb-2 text-blue-800">Additional Requirements</h3>
+                  <div className="border rounded-lg p-3 sm:p-4 bg-blue-50 border-blue-200">
+                    <h3 className="font-semibold text-xs sm:text-sm mb-2 text-blue-800">Additional Requirements</h3>
                     <p className="text-xs text-blue-700 mb-2">After submission, you will need to complete:</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
                       {selectedLoanProduct?.requiresGuarantor && (
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Guarantor Information</span>
+                        <span className="text-[10px] sm:text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Guarantor Information</span>
                       )}
                       {selectedLoanProduct?.requiresCollateral && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Collateral Details</span>
+                        <span className="text-[10px] sm:text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Collateral Details</span>
                       )}
                       {selectedLoanProduct?.requiresNextOfKin && (
-                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">Next of Kin Information</span>
+                        <span className="text-[10px] sm:text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">Next of Kin Information</span>
                       )}
                     </div>
                   </div>
@@ -1308,11 +1276,19 @@ const LoanApplication = () => {
               </div>
             </div>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={cancelSubmitApplication} disabled={isLoading}>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <AlertDialogCancel
+                onClick={cancelSubmitApplication}
+                disabled={isLoading}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction onClick={confirmSubmitApplication} disabled={isLoading}>
+              <AlertDialogAction
+                onClick={confirmSubmitApplication}
+                disabled={isLoading}
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
                 {isLoading ? 'Submitting...' : 'Confirm & Submit Application'}
               </AlertDialogAction>
             </AlertDialogFooter>

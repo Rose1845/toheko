@@ -11,36 +11,39 @@ import { Bell, Moon, Sun, Globe, UserRound, Palette, Lock, Eye } from 'lucide-re
 const Settings = () => {
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold">Settings</h1>
-            <p className="text-sm text-muted-foreground">Customize your account preferences</p>
+            <h1 className="text-lg sm:text-xl font-semibold">Settings</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Customize your account preferences</p>
           </div>
         </div>
         
-        <Tabs defaultValue="appearance" className="mb-6">
-          <TabsList className="mb-4">
-            <TabsTrigger value="appearance">
-              <Palette className="h-4 w-4 mr-2" />
-              Appearance
+        <Tabs defaultValue="appearance" className="mb-4 sm:mb-6">
+          <TabsList className="mb-4 grid w-full grid-cols-3">
+            <TabsTrigger value="appearance" className="text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Theme</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications">
-              <Bell className="h-4 w-4 mr-2" />
-              Notifications
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm">
+              <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="sm:hidden">Alerts</span>
             </TabsTrigger>
-            <TabsTrigger value="privacy">
-              <Lock className="h-4 w-4 mr-2" />
-              Privacy
+            <TabsTrigger value="privacy" className="text-xs sm:text-sm">
+              <Lock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Privacy</span>
+              <span className="sm:hidden">Privacy</span>
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="appearance">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Theme Settings</CardTitle>
-                  <CardDescription>Customize how the dashboard looks for you</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Theme Settings</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Customize how the dashboard looks for you</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">

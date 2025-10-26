@@ -7,70 +7,72 @@ import { Link } from "react-router-dom";
 const UserDashboard = () => {
   return (
     <UserDashboardLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-semibold mb-2">Dashboard Overview</h1>
-        <p className="text-muted-foreground mb-6">Welcome to the TohekoSACCO member portal</p>
-        
+      <div className="space-y-4 sm:space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold mb-2">Dashboard Overview</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Welcome to the TohekoSACCO member portal</p>
+        </div>
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Active Loans</p>
-                  <h3 className="text-2xl font-bold">0</h3>
+                  <p className="text-xs sm:text-sm font-medium">Active Loans</p>
+                  <h3 className="text-xl sm:text-2xl font-bold">0</h3>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Total Savings</p>
-                  <h3 className="text-2xl font-bold">$0.00</h3>
+                  <p className="text-xs sm:text-sm font-medium">Total Savings</p>
+                  <h3 className="text-xl sm:text-2xl font-bold">KES 0.00</h3>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <PiggyBank className="h-5 w-5 text-green-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <PiggyBank className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Next Payment Due</p>
-                  <h3 className="text-2xl font-bold">None</h3>
+                  <p className="text-xs sm:text-sm font-medium">Next Payment Due</p>
+                  <h3 className="text-xl sm:text-2xl font-bold">None</h3>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-amber-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Monthly Transactions</p>
-                  <h3 className="text-2xl font-bold">0</h3>
+                  <p className="text-xs sm:text-sm font-medium">Monthly Transactions</p>
+                  <h3 className="text-xl sm:text-2xl font-bold">0</h3>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Activity className="h-5 w-5 text-purple-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Recent Activity */}
           <Card className="overflow-hidden">
             <CardHeader>
