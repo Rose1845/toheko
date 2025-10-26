@@ -121,13 +121,26 @@ export const loanService = {
   },
 
   // Loan Applications
-  getAllLoanApplications: async (page = 1, size = 10, search = ""): Promise<any> => {
-    const params = new URLSearchParams({
-      page: String(page - 1),
-      size: String(size),
-    });
-    if (search) params.append("search", search);
-    const response = await apiClient.get(`/api/v1/loan-applications/get-all?${params.toString()}`);
+  // getAllLoanApplications: async (page = 1, size = 10, search = ""): Promise<any> => {
+  //   const params = new URLSearchParams({
+  //     page: String(page - 1),
+  //     size: String(size),
+  //   });
+  //   if (search) params.append("search", search);
+  //   const response = await apiClient.get(`/api/v1/loan-applications/get-all?${params.toString()}`);
+  //   return response.data;
+  // },
+
+  getAllLoanApplications: async (params?: any): Promise<any> => {
+    const urlParams = new URLSearchParams();
+    if (params.page !== undefined) urlParams.append("page", String(params.page));
+    if (params.size !== undefined) urlParams.append("size", String(params.size));
+    if (params.minAmount) urlParams.append("minAmount", String(params.minAmount));
+    if (params.maxAmount) urlParams.append("maxAmount", String(params.maxAmount));
+    if (params.createdFrom) urlParams.append("createdFrom", params.createdFrom);
+    if (params.createdTo) urlParams.append("createdTo", params.createdTo);
+    if (params.search) urlParams.append("search", params.search);
+    const response = await apiClient.get(`/api/v1/loan-applications/get-all?${urlParams.toString()}`);
     return response.data;
   },
 
@@ -140,6 +153,7 @@ export const loanService = {
     const response = await apiClient.get(`/api/v1/loan-applications/${id}`);
     return response.data;
   },
+
   getLoanPenaltyById: async (id: number): Promise<LoanApplication> => {
     const response = await apiClient.get(`/api/v1/loan-penalties/${id}`);
     return response.data;
@@ -228,15 +242,21 @@ export const loanService = {
     return response.data;
   },
 
-  getAllLoanAccounts: async (page = 1, size = 10, search = ""): Promise<any> => {
-    const params = new URLSearchParams({
-      page: String(page - 1),
-      size: String(size),
-    });
-    if (search) params.append("search", search);
-    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?${params.toString()}`);
+  // getAllLoanAccounts: async (page = 1, size = 10, search = ""): Promise<any> => {
+  //   const params = new URLSearchParams({
+  //     page: String(page - 1),
+  //     size: String(size),
+  //   });
+  //   if (search) params.append("search", search);
+  //   const response = await apiClient.get(`/api/v1/loan-accounts/get-all?${params.toString()}`);
+  //   return response.data;
+  // },
+
+  getAllLoanAccounts: async (query: string): Promise<any> => {
+    const response = await apiClient.get(`/api/v1/loan-accounts/get-all?${query}`);
     return response.data;
   },
+  
 
   getLoanDashboardSummary: async (): Promise<any> => {
     const response = await apiClient.get('/api/v1/loan-applications/summary-dashboard');

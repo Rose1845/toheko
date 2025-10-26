@@ -13,7 +13,8 @@ const Navbar = () => {
             T
           </div>
           <span className="text-xl font-display font-semibold text-gray-900">
-            Toheko SACCO
+            SACCO
+             {/* Toheko SACCO */}
           </span>
         </Link>
 

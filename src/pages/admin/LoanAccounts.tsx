@@ -7,6 +7,8 @@ import { loanService } from "@/services/loanService";
 import { memberService } from "@/services/memberService";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui/data-table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const LoanAccounts = () => {
   const [accounts, setAccounts] = useState([]);
@@ -18,6 +20,12 @@ const LoanAccounts = () => {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [accountStats, setAccountStats] = useState<any>(null);
+  const [showDisburseDialog, setShowDisburseDialog] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
+  const [disburseLoading, setDisburseLoading] = useState(false);
+  const [disburseAmount, setDisburseAmount] = useState(0);
+  const [disburseRemarks, setDisburseRemarks] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchAccountsAndMembers = async () => {
@@ -66,10 +74,93 @@ const LoanAccounts = () => {
     }
   };
 
-  // DataTable columns
+  // Disburse handler
+  const handleOpenDisburseDialog = (account: any) => {
+    setSelectedAccount(account);
+    setDisburseAmount(account.principalAmount);
+    setDisburseRemarks("");
+    setShowDisburseDialog(true);
+  };
+
+  const handleDisburseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccount) return;
+    setDisburseLoading(true);
+    try {
+      const response = await loanService.disburseLoanAccount({
+        loanAccountId: selectedAccount.id,
+        amount: Number(disburseAmount),
+        remarks: disburseRemarks,
+      });
+      if (response?.code === 200 || response?.code === 201) {
+        toast({
+          title: "Success",
+          description:  response?.message || "Loan account disbursed successfully.",
+        });
+        const accountsResponse = await loanService.getAllLoanAccounts(page, pageSize, "");
+        const accountsData = accountsResponse.content || accountsResponse.data?.content || [];
+        setAccounts(accountsData);
+        if (accountsResponse.totalPages) setTotalPages(accountsResponse.totalPages);
+        else if (accountsResponse.data?.totalPages) setTotalPages(accountsResponse.data.totalPages);
+        setShowDisburseDialog(false);
+        setSelectedAccount(null);
+        setDisburseAmount(0);
+        setDisburseRemarks("");
+      } else {
+        toast({
+          title: "Error",
+          description: response?.message || "Failed to disburse loan account.",
+          variant: "destructive",
+        });
+      }
+      // Optionally handle error or show error toast if code !== 200
+    } catch (error) {
+      // Handle error (toast, etc.)
+    } finally {
+      setDisburseLoading(false);
+    }
+  };
+
+  // Filter form state for Loan Accounts
+  const [filterMinAmount, setFilterMinAmount] = useState("");
+  const [filterMaxAmount, setFilterMaxAmount] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
+
+  // Filter handler for Loan Accounts
+  const handleFilterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchLoading(true);
+    try {
+      const params: any = {
+        page: page - 1,
+        size: pageSize,
+        q: filterSearch || undefined,
+        minAmount: filterMinAmount || undefined,
+        maxAmount: filterMaxAmount || undefined,
+        date: filterDate || undefined,
+      };
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+      const urlParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) urlParams.append(key, String(value));
+      });
+      const response = await loanService.getAllLoanAccounts(urlParams.toString());
+      const accountsData = response.content || response.data?.content || [];
+      setAccounts(accountsData);
+      if (response.totalPages) setTotalPages(response.totalPages);
+      else if (response.data?.totalPages) setTotalPages(response.data.totalPages);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to filter loan accounts.", variant: "destructive" });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const columns: Column<any>[] = [
     { header: "Account No", accessorKey: "accountNo", sortable: true },
     { header: "Member", accessorKey: "memberId", sortable: true, cell: (acc) => getMemberName(acc.memberId) },
+    {header: "Phone Number", accessorKey: (acc) => acc.phoneNumber, cell: (acc) => (<span className="font-medium">{acc?.mobileNumber}</span>)},
     { header: "Principal", accessorKey: "principalAmount", sortable: true },
     { header: "Interest Rate", accessorKey: "interestRate", sortable: true, cell: (acc) => `${acc.interestRate}%` },
     { header: "Status", accessorKey: "status", sortable: true, cell: (acc) => (
@@ -78,13 +169,33 @@ const LoanAccounts = () => {
     { header: "Phase", accessorKey: "phase", sortable: true },
     { header: "Disbursed At", accessorKey: "disbursedAt", sortable: true, cell: (acc) => acc.disbursedAt ? format(new Date(acc.disbursedAt), "dd/MM/yyyy") : "--" },
     { header: "Maturity Date", accessorKey: "maturityDate", sortable: true },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (acc) => (
+        <Button
+          size="sm"
+          className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded px-3 py-1"
+          onClick={() => handleOpenDisburseDialog(acc)}
+        >
+          Disburse
+        </Button>
+      ),
+    },
   ];
 
   // Server-side search handler
   const handleSearch = async (searchValue: string) => {
     setSearchLoading(true);
     try {
-      const accountsResponse = await loanService.getAllLoanAccounts(page, pageSize, searchValue);
+      const params: any = {
+        page: page - 1,
+        size: pageSize,
+      };
+      if (searchValue) params.q = searchValue;
+      const urlParams = new URLSearchParams();
+      const accountsResponse = await loanService.getAllLoanAccounts(urlParams.toString());
+
       const accountsData = accountsResponse.content || accountsResponse.data?.content || [];
       setAccounts(accountsData);
       if (accountsResponse.totalPages) setTotalPages(accountsResponse.totalPages);
@@ -120,12 +231,32 @@ const LoanAccounts = () => {
                 <CardTitle>Loan Accounts</CardTitle>
               </CardHeader>
           <CardContent>
+            {/* Filter Form */}
+            <form className="flex gap-4 mb-6 items-end" onSubmit={handleFilterSubmit}>
+              <div>
+                <label className="block text-sm font-medium mb-1">Search</label>
+                <input type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="border rounded px-2 py-1 w-40" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Amount</label>
+                <input type="number" value={filterMinAmount} onChange={e => setFilterMinAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Amount</label>
+                <input type="number" value={filterMaxAmount} onChange={e => setFilterMaxAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date</label>
+                <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border rounded px-2 py-1 w-40" />
+              </div>
+              <Button type="submit" variant="secondary" disabled={searchLoading}>Filter</Button>
+            </form>
             <DataTable
               data={filteredAccounts}
               columns={columns}
               keyField="id"
               pagination={false}
-              searchable={true}
+              searchable={false}
               pageSize={10}
               emptyMessage="No loan accounts found"
               loading={searchLoading}
@@ -152,6 +283,44 @@ const LoanAccounts = () => {
             </div>
           </CardContent>
         </Card>
+        {/* Disburse Dialog */}
+        {showDisburseDialog && (
+          <Dialog open={showDisburseDialog} onOpenChange={setShowDisburseDialog}>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Disburse Loan Account</DialogTitle>
+                <DialogDescription>
+                  Enter disbursement details for account #{selectedAccount?.accountNo}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleDisburseSubmit} className="space-y-4">
+                <div>
+                  <label>Amount</label>
+                  <input
+                    type="number"
+                    value={disburseAmount}
+                    onChange={e => setDisburseAmount(Number(e.target.value))}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label>Remarks</label>
+                  <textarea
+                    value={disburseRemarks}
+                    onChange={e => setDisburseRemarks(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={disburseLoading}>
+                    {disburseLoading ? "Processing..." : "Disburse"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -134,17 +134,7 @@ const disbursements = disbursementsData?.content || [];
     queryFn: loanService.getAllLoanApplications,
   });
 
-  const { data: members = [], isLoading: isMembersLoading } = useQuery({
-    queryKey: ["members"],
-    queryFn: memberService.getAllMembers,
-  });
 
-  // Helper function to get member name
-  const getMemberName = (memberId: number) => {
-    const member = members?.find((m) => m.memberId === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : "Unknown";
-  };
-  
   // Helper to get loan application by ID
   const getLoanApplication = (id: number): LoanApplication | undefined => {
     return loanApplications.find(loan => loan.id === id);
@@ -424,7 +414,7 @@ const disbursements = disbursementsData?.content || [];
   const getStatusVariant = (status: string) => {
     switch (status.toUpperCase()) {
       case "COMPLETED":
-        return "success";
+        return "default";
       case "PROCESSING":
         return "default";
       case "PENDING":
@@ -439,129 +429,19 @@ const disbursements = disbursementsData?.content || [];
   };
 
   // DataTable column definitions
-  const columns: Column<Disbursement>[] = [
-    {
-      header: "ID",
-      accessorKey: "id",
-      // cell: (row) => <span className="font-medium">{row.getValue() as string}</span>,
-    },
-    {
-      header: "Code",
-      accessorKey: "disbursementCode",
-    },
-    {
-      header: "Loan Application",
-      accessorKey: "loanApplicationCode",
-    },
-    {
-      header: "Member",
-      accessorKey: "memberName",
-    },
-    {
-      header: "Amount",
-      accessorKey: "amount",
-      cell: (row) => (
-        <span className="font-medium">
-          {/* KSH {Number(row.getValue()).toLocaleString()} */}
-        </span>
-      ),
-    },
-    {
-      header: "Date",
-      accessorKey: "disbursementDate",
-      // cell: (row) => {
-      //   const date = row.getValue() as string;
-      //   return date ? format(new Date(date), "PPP") : "N/A";
-      // },
-    },
-    {
-      header: "Status",
-      accessorKey: "status",
-      // cell: (row) => {
-      //   const status = row.getValue() as string;
-      //   return (
-      //     <Badge variant={getStatusVariant(status)}>{status}</Badge>
-      //   );
-      // },
-    },
-    {
-      header: "Actions",
-      id: "actions",
-      // cell: ({ row }) => {
-      //   const disbursement = row.original;
-      //   const isActive = disbursement.isActive;
-      //   const status = disbursement.status;
-        
-      //   return (
-      //     <div className="flex items-center gap-2">
-      //       <Button
-      //         variant="ghost"
-      //         size="sm"
-      //         onClick={() => handleViewDetails(disbursement)}
-      //       >
-      //         <Search className="h-4 w-4" />
-      //       </Button>
-            
-      //       {status === "PENDING" && (
-      //         <>
-      //           <Button
-      //             variant="outline"
-      //             size="sm"
-      //             onClick={() => handleEditDisbursement(disbursement)}
-      //           >
-      //             <Edit className="h-4 w-4" />
-      //           </Button>
-      //           <Button
-      //             variant="default"
-      //             size="sm"
-      //             onClick={() => handleProcessDisbursement(disbursement.id)}
-      //             disabled={isProcessLoading}
-      //           >
-      //             {isProcessLoading ? (
-      //               <Loader2 className="h-4 w-4 animate-spin" />
-      //             ) : (
-      //               <CreditCard className="h-4 w-4" />
-      //             )}
-      //           </Button>
-      //           <Button
-      //             variant="destructive"
-      //             size="sm"
-      //             onClick={() => handleConfirmDelete(disbursement)}
-      //           >
-      //             <Trash2 className="h-4 w-4" />
-      //           </Button>
-      //         </>
-      //       )}
-
-      //       {status === "PROCESSING" && (
-      //         <>
-      //           <Button
-      //             variant="success"
-      //             size="sm"
-      //             onClick={() => handleCompleteDisbursement(disbursement)}
-      //           >
-      //             <CheckCircle className="h-4 w-4" />
-      //           </Button>
-      //           <Button
-      //             variant="destructive"
-      //             size="sm"
-      //             onClick={() => handleFailDisbursement(disbursement)}
-      //           >
-      //             <XCircle className="h-4 w-4" />
-      //           </Button>
-      //           <Button
-      //             variant="outline"
-      //             size="sm"
-      //             onClick={() => handleCancelDisbursement(disbursement)}
-      //           >
-      //             <Clock className="h-4 w-4" />
-      //           </Button>
-      //         </>
-      //       )}
-      //     </div>
-      //   );
-      // },
-    },
+  const columns: Column<any>[] = [
+    { header: "ID", accessorKey: "id", sortable: true },
+    { header: "Member ID", accessorKey: "memberName", sortable: true },
+    { header: "Loan Account No", accessorKey: "accountNo", sortable: true },
+    { header: "Loan Application", accessorKey: "loanApplicationCode", sortable: true },
+    { header: "Phone", accessorKey: "msisdnMasked", cell: (row) => row.msisdnMasked || "--" },
+    { header: "Amount", accessorKey: "amount", sortable: true },
+    { header: "Channel", accessorKey: "channel", sortable: true },
+    { header: "Status", accessorKey: "status", sortable: true },
+    { header: "Error Message", accessorKey: "errorMessage" },
+    { header: "Remarks", accessorKey: "remarks" },
+    { header: "Requested At", accessorKey: "requestedAt", cell: (row) => row.requestedAt ? format(new Date(row.requestedAt), "dd/MM/yyyy HH:mm") : "--" },
+    { header: "Executed At", accessorKey: "executedAt", cell: (row) => row.executedAt ? format(new Date(row.executedAt), "dd/MM/yyyy HH:mm") : "--" },
   ];
 
   return (
