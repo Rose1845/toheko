@@ -599,7 +599,7 @@ const disbursements = disbursementsData?.content || [];
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Amount</h3>
-                    <p>KSH {selectedDisbursement.amount.toLocaleString()}</p>
+                    <p>KES {selectedDisbursement.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-500">Date</h3>

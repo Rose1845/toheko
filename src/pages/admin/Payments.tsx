@@ -692,6 +692,7 @@ const Payments = () => {
                 </div>
                 {/* Remarks */}
                 <FormField
+                // add required validation
                   control={paymentForm.control}
                   name="remarks"
                   render={({ field }) => (
@@ -699,6 +700,7 @@ const Payments = () => {
                       <FormLabel className="font-medium">Remarks</FormLabel>
                       <FormControl>
                         <Textarea
+                          required
                           placeholder="Additional notes about this payment"
                           className="min-h-[100px] resize-none"
                           {...field}

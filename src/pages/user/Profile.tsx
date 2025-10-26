@@ -31,19 +31,19 @@ const dummyProfile = {
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  
+
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold">My Profile</h1>
-            <p className="text-sm text-muted-foreground">View and update your personal information</p>
+            <h1 className="text-lg sm:text-xl font-semibold">My Profile</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">View and update your personal information</p>
           </div>
-          <Button 
+          <Button
             variant={isEditing ? "outline" : "default"}
             onClick={() => setIsEditing(!isEditing)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-sm w-full sm:w-auto"
           >
             {isEditing ? (
               <>Cancel Editing</>
@@ -56,27 +56,39 @@ const Profile = () => {
           </Button>
         </div>
         
-        <Tabs defaultValue="personal" className="mb-6">
-          <TabsList className="mb-4">
-            <TabsTrigger value="personal">Personal Info</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        <Tabs defaultValue="personal" className="mb-4 sm:mb-6">
+          <TabsList className="mb-4 grid w-full grid-cols-3">
+            <TabsTrigger value="personal" className="text-xs sm:text-sm">
+              <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Personal Info</span>
+              <span className="sm:hidden">Info</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="text-xs sm:text-sm">
+              <KeyRound className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Security</span>
+              <span className="sm:hidden">Security</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm">
+              <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="sm:hidden">Alerts</span>
+            </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="personal">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Member Profile Card */}
-              <Card className="md:col-span-1 shadow-sm">
+              <Card className="lg:col-span-1 shadow-sm">
                 <CardHeader className="pb-2 text-center">
                   <div className="flex justify-center mb-2">
-                    <Avatar className="h-24 w-24">
+                    <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                       <AvatarImage src="" />
-                      <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      <AvatarFallback className="text-xl sm:text-2xl bg-primary/10 text-primary">
                         {dummyProfile.firstName[0]}{dummyProfile.lastName[0]}
                       </AvatarFallback>
                     </Avatar>
                   </div>
-                  <CardTitle className="text-lg">{dummyProfile.firstName} {dummyProfile.lastName}</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">{dummyProfile.firstName} {dummyProfile.lastName}</CardTitle>
                   <CardDescription>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                       Active Member

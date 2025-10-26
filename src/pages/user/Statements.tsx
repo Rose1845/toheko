@@ -71,22 +71,22 @@ const Statements = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold">Statements & Reports</h1>
-            <p className="text-sm text-muted-foreground">View and download your account statements</p>
+            <h1 className="text-lg sm:text-xl font-semibold">Statements & Reports</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">View and download your account statements</p>
           </div>
         </div>
 
         {/* Filter and Search */}
-        <Card className="mb-6 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Find Statements</CardTitle>
-            <CardDescription className="text-xs">Filter and search for specific statements</CardDescription>
+        <Card className="mb-4 sm:mb-6 shadow-sm">
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg">Find Statements</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Filter and search for specific statements</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label htmlFor="statement-type">Statement Type</Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
@@ -136,51 +136,97 @@ const Statements = () => {
         
         {/* Statements List */}
         <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Available Statements</CardTitle>
-            <CardDescription className="text-xs">Click on a statement to download or view</CardDescription>
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg">Available Statements</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Click on a statement to download or view</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStatements.length > 0 ? filteredStatements.map((statement) => (
-                  <TableRow key={statement.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <span>{statement.title}</span>
+            {/* Mobile Cards View */}
+            <div className="block md:hidden space-y-3">
+              {filteredStatements.length > 0 ? filteredStatements.map((statement) => (
+                <Card key={statement.id} className="p-4 border-l-4 border-l-blue-500">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-start space-x-2 flex-1">
+                        <FileText className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{statement.title}</p>
+                          <p className="text-xs text-muted-foreground">{statement.type}</p>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell>{statement.type}</TableCell>
-                    <TableCell>{statement.accountNumber}</TableCell>
-                    <TableCell>{statement.date}</TableCell>
-                    <TableCell>{statement.format} ({statement.fileSize})</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
                         <span className="sr-only">Download</span>
                         <Download className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                )) : (
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Account</p>
+                        <p className="font-medium font-mono text-xs">{statement.accountNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Date</p>
+                        <p className="font-medium">{statement.date}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Format & Size</p>
+                        <p className="font-medium">{statement.format} ({statement.fileSize})</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No statements found matching your criteria</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No statements found matching your criteria
-                    </TableCell>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Format</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredStatements.length > 0 ? filteredStatements.map((statement) => (
+                    <TableRow key={statement.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <span>{statement.title}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{statement.type}</TableCell>
+                      <TableCell>{statement.accountNumber}</TableCell>
+                      <TableCell>{statement.date}</TableCell>
+                      <TableCell>{statement.format} ({statement.fileSize})</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <span className="sr-only">Download</span>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        No statements found matching your criteria
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-between py-3">
             <div className="text-xs text-muted-foreground">

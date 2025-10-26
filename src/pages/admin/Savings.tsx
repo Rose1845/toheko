@@ -227,7 +227,7 @@ const Savings = () => {
       sortable: true,
       cell: (saving) => (
         <span className="font-medium">
-          {new Intl.NumberFormat("en-US", {
+          {new Intl.NumberFormat("en-KE", {
             style: "currency",
             currency: "KES",
           }).format(saving?.savingAmount)}

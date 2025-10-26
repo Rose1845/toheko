@@ -51,6 +51,12 @@ export interface STKPushResponse {
   message: string;
   timestamp: string;
   checkoutRequestID?: string;
+  externalRef?: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  stkInitCode?: string;
+  stkInitMessage?: string;
+  stkAccepted?: boolean;
 }
 
 export interface PaymentResponse {
@@ -58,6 +64,26 @@ export interface PaymentResponse {
   message: string;
   timestamp: string;
   requestID: string;
+}
+
+export interface PaymentStatusRequest {
+  amount: number;
+  accountId: number;
+  paymentTypeId: number;
+  modeOfPaymentId: number;
+  phoneNumber: string;
+  remarks: string;
+  externalRef: string;
+  memberId: number;
+  groupId: number;
+}
+
+export interface PaymentStatusResponse {
+  responseCode: string;
+  message: string;
+  timestamp: string;
+  requestId: string;
+  externalRef: string;
 }
 
 export interface PaymentHistory {
@@ -101,6 +127,22 @@ export interface PaymentHistoryResponse {
   first: boolean;
   numberOfElements: number;
   empty: boolean;
+}
+
+export interface PaymentKPIs {
+  completedCount: number;
+  completedAmount: number;
+  pendingCount: number;
+  pendingAmount: number;
+  failedCount: number;
+  failedAmount: number;
+  totalCount: number;
+  totalRequested: number;
+  stkSuccessRate: number;
+  reconcileLagP50Sec: number;
+  reconcileLagP95Sec: number;
+  lastPaymentAt: string;
+  mpesaResultCodeCounts: Record<string, number>;
 }
 
 // User payment service for the member dashboard
@@ -160,6 +202,17 @@ export const userPaymentService = {
     }
   },
 
+  // Check payment status using externalRef
+  checkPaymentStatus: async (statusData: PaymentStatusRequest): Promise<PaymentStatusResponse> => {
+    try {
+      const response = await apiClient.post('/api/v1/payments', statusData);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      throw error;
+    }
+  },
+
   // Get payment history for a user
   getPaymentHistory: async (memberId: number, page: number = 0, size: number = 20): Promise<PaymentHistoryResponse> => {
     try {
@@ -189,6 +242,19 @@ export const userPaymentService = {
       return response.data;
     } catch (error) {
       console.error('Error exporting payment history:', error);
+      throw error;
+    }
+  },
+
+  // Get payment KPIs for a member
+  getPaymentKPIs: async (memberId: number): Promise<PaymentKPIs> => {
+    try {
+      const response = await apiClient.get(`/api/v1/payments/kpis`, {
+        params: { memberId }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching payment KPIs:', error);
       throw error;
     }
   }

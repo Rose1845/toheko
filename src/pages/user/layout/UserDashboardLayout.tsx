@@ -144,7 +144,7 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
       )}
 
       {/* Content area */}
-      <div 
+      <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
                    ${sidebarState.isOpen && !sidebarState.isMobile
                        ? sidebarState.collapsed ? "md:ml-20" : "md:ml-64"
@@ -152,7 +152,7 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
                    }`}
       >
         <UserDashboardHeader toggleSidebar={toggleSidebar} sidebarOpen={sidebarState.isOpen} />
-        <main className="flex-1 overflow-y-auto p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

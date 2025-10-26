@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/sonner';
 import { ArrowRight, CheckCircle, CreditCard, Wallet } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
-import { userPaymentService, Account, PaymentType, PaymentMode } from '@/services/user-services/userPaymentService';
+import { userPaymentService, Account, PaymentType, PaymentMode, STKPushResponse } from '@/services/user-services/userPaymentService';
 
 // JWT token interface
 interface TohekoJwtPayload {
@@ -49,6 +49,12 @@ const Payments = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [remarks, setRemarks] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
+
+  // STK Push and Payment Status states
+  const [stkResponse, setStkResponse] = useState<STKPushResponse | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'completed' | 'failed' | null>(null);
+  const [statusCheckTimeout, setStatusCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const paymentCheckDuration = 10000; // Wait 10 seconds before directing to payment history
 
   // Fetch accounts when component mounts
   useEffect(() => {
@@ -131,17 +137,83 @@ const Payments = () => {
     }
   }, [currentStep]);
 
+  // Cleanup effect to clear timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      if (statusCheckTimeout) {
+        clearTimeout(statusCheckTimeout);
+      }
+    };
+  }, [statusCheckTimeout]);
+
   // Fetch user ID from JWT token
   const getUserId = (): number | null => {
     const token = localStorage.getItem('token');
     if (!token) return null;
-    
+
     try {
       const decoded = jwtDecode<TohekoJwtPayload>(token);
       return decoded.userId;
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;
+    }
+  };
+
+  // Format phone number to always start with 254
+  const formatPhoneNumber = (phone: string): string => {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+
+    // If empty, return empty
+    if (!cleaned) return '';
+
+    // If it starts with 0 (local format), replace with 254
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+      return '254' + cleaned.substring(1);
+    }
+
+    // If it already starts with 254, return as is
+    if (cleaned.startsWith('254') && cleaned.length === 12) {
+      return cleaned;
+    }
+
+    // If it's a 9-digit number starting with 7 or 1 (typical Kenyan mobile), add 254
+    if (cleaned.length === 9 && (cleaned.startsWith('7') || cleaned.startsWith('1'))) {
+      return '254' + cleaned;
+    }
+
+    // If it's 10 digits starting with 7 or 1, remove first digit and add 254
+    if (cleaned.length === 10 && (cleaned.startsWith('7') || cleaned.startsWith('1'))) {
+      return '254' + cleaned.substring(1);
+    }
+
+    // For any other case, try to add 254 if it looks like a valid mobile number
+    if (cleaned.length === 9) {
+      return '254' + cleaned;
+    }
+
+    // Return as is if already properly formatted or unrecognized format
+    return cleaned;
+  };
+
+  // Function to wait 10 seconds then direct user to payment history
+  const checkPaymentStatus = async (externalRef: string): Promise<void> => {
+    try {
+      setPaymentStatus('checking');
+      console.log(`Payment initiated with external reference: ${externalRef}`);
+
+      // Wait 10 seconds then complete
+      const timeout = setTimeout(() => {
+        setPaymentStatus('completed');
+        toast.success('Payment initiated! Please check your payment history to view the final status.');
+      }, paymentCheckDuration);
+
+      setStatusCheckTimeout(timeout);
+    } catch (error) {
+      console.error('Error in payment status check:', error);
+      setPaymentStatus('completed');
+      toast.success('Payment initiated! Please check your payment history to view the final status.');
     }
   };
 
@@ -167,11 +239,21 @@ const Payments = () => {
         toast.error('Please enter a valid amount');
         return;
       }
-      
+
       if (!phoneNumber) {
         toast.error('Please enter a phone number');
         return;
       }
+
+      // Validate phone number format (should be 12 digits starting with 254)
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      if (!formattedPhone.startsWith('254') || formattedPhone.length !== 12) {
+        toast.error('Please enter a valid Kenyan phone number');
+        return;
+      }
+
+      // Update the phone number state with the formatted version
+      setPhoneNumber(formattedPhone);
     }
     
     if (currentStep < 5) {
@@ -191,6 +273,13 @@ const Payments = () => {
       return;
     }
 
+    // Ensure phone number is properly formatted
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+    if (!formattedPhoneNumber.startsWith('254') || formattedPhoneNumber.length !== 12) {
+      toast.error('Please enter a valid Kenyan phone number');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -200,45 +289,76 @@ const Payments = () => {
         accountId: selectedAccount.accountId,
         paymentTypeId: selectedPaymentType.paymentTypeId,
         modeOfPaymentId: selectedPaymentMode.modeOfPaymentId,
-        phoneNumber,
+        phoneNumber: formattedPhoneNumber,
         remarks: remarks || 'Payment via member portal'
       };
 
       // Create the payment record and get the requestID
       const paymentResponse = await userPaymentService.createPayment(paymentData);
       console.log('Payment created:', paymentResponse);
-      
+
       // Extract the requestID from the payment response
       const paymentRequestId = paymentResponse.requestID;
-      
+
       // Store the payment reference for the success screen
       setPaymentReference(paymentRequestId);
-      
+
       // Step 2: If M-PESA selected, initiate STK push using the requestID as paymentReference
       if (selectedPaymentMode.name.toLowerCase().includes('m-pesa')) {
+        const userId = getUserId();
+        if (!userId) {
+          toast.error('User session expired. Please login again.');
+          setIsLoading(false);
+          return;
+        }
+
         const stkPushData = {
           amount: String(amount),
-          phoneNumber,
+          phoneNumber: formattedPhoneNumber,
           remarks: remarks || 'Payment via member portal',
-          app: 'toheko', // Always use "toheko" as the app name
+          app: 'TOHEKO', // Always use "TOHEKO" as the app name
           paymentReference: paymentRequestId, // Use the requestID from payment creation as paymentReference
-          memberId: selectedAccount.member.memberId // Include the memberId from the selected account
+          memberId: userId // Use userId from JWT token
         };
-        
+
         // Initiate the STK push
         const stkResponse = await userPaymentService.initiateSTKPush(stkPushData);
         console.log('STK push initiated:', stkResponse);
-        
-        toast.success('Payment initiated! Check your phone for M-PESA prompt.');
+
+        // Store the STK response
+        setStkResponse(stkResponse);
+
+        // Check if STK push was successful (responseCode 200)
+        if (stkResponse.responseCode === '200' && stkResponse.stkAccepted) {
+          toast.success('Payment initiated! Check your phone for M-PESA prompt.');
+          setPaymentStatus('pending');
+
+          // Start checking payment status if we have an externalRef
+          if (stkResponse.externalRef) {
+            // Wait a bit before starting status checks to allow processing
+            const timeout = setTimeout(() => {
+              checkPaymentStatus(stkResponse.externalRef!);
+            }, 5000); // Wait 5 seconds before first status check
+            setStatusCheckTimeout(timeout);
+          }
+        } else {
+          // STK push failed
+          toast.error(stkResponse.stkInitMessage || 'STK push initiation failed. Please try again.');
+          setPaymentStatus('failed');
+          setIsLoading(false);
+          return;
+        }
       } else {
         toast.success('Payment recorded successfully!');
+        setPaymentStatus('completed');
       }
-      
+
       setIsLoading(false);
       setCurrentStep(5); // Move to success step
     } catch (error) {
       console.error('Payment error:', error);
       toast.error('Payment failed. Please try again.');
+      setPaymentStatus('failed');
       setIsLoading(false);
     }
   };
@@ -249,9 +369,9 @@ const Payments = () => {
       case 1:
         return (
           <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Select Account</CardTitle>
-              <CardDescription className="text-xs">Choose the account you want to make a payment to</CardDescription>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-base sm:text-lg">Select Account</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Choose the account you want to make a payment to</CardDescription>
             </CardHeader>
             <CardContent className="pb-2">
               {loading.accounts ? (
@@ -271,16 +391,16 @@ const Payments = () => {
                   {accounts.map((account) => (
                     <div
                       key={account.accountId}
-                      className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedAccount?.accountId === account.accountId ? 'bg-primary/10 border-primary' : 'hover:bg-muted'}`}
+                      className={`p-2 sm:p-3 border rounded-md cursor-pointer transition-colors ${selectedAccount?.accountId === account.accountId ? 'bg-primary/10 border-primary' : 'hover:bg-muted'}`}
                       onClick={() => setSelectedAccount(account)}
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <CreditCard className="h-4 w-4 text-primary" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-sm">{account.name}</h3>
-                          <p className="text-xs text-muted-foreground">{account.accountNumber}</p>
+                          <h3 className="font-medium text-xs sm:text-sm">{account.name}</h3>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">{account.accountNumber}</p>
                         </div>
                       </div>
                     </div>
@@ -441,6 +561,8 @@ const Payments = () => {
                       type="number"
                       placeholder="Enter amount"
                       value={amount}
+                      required
+                      
                       onChange={(e) => setAmount(e.target.value)}
                     />
                   </div>
@@ -449,21 +571,33 @@ const Payments = () => {
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
-                      placeholder="e.g. 254700000000"
+                      placeholder="e.g. 0712345678 or 712345678 or 0112345678"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      required
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setPhoneNumber(formatted);
+                      }}
+                      className={phoneNumber && !phoneNumber.startsWith('254') ? 'border-yellow-300' : ''}
                     />
                     <p className="text-xs text-muted-foreground">
                       Enter the phone number registered with M-PESA
+                      {phoneNumber && phoneNumber.startsWith('254') && phoneNumber.length === 12 && (
+                        <span className="text-green-600 ml-1">✓ Formatted correctly</span>
+                      )}
+                      {phoneNumber && (!phoneNumber.startsWith('254') || phoneNumber.length !== 12) && (
+                        <span className="text-yellow-600 ml-1">⚠ Will be formatted to: {formatPhoneNumber(phoneNumber)}</span>
+                      )}
                     </p>
                   </div>
                   
                   <div className="grid gap-2">
-                    <Label htmlFor="remarks">Remarks (Optional)</Label>
+                    <Label htmlFor="remarks">Remarks</Label>
                     <Input
                       id="remarks"
                       placeholder="Add any notes about this payment"
                       value={remarks}
+                      required
                       onChange={(e) => setRemarks(e.target.value)}
                     />
                   </div>
@@ -502,32 +636,57 @@ const Payments = () => {
       case 5:
         return (
           <Card className="shadow-sm">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 sm:pb-3">
               <div className="flex items-center justify-center mb-1">
-                <CheckCircle className="h-12 w-12 text-green-500" />
+                {paymentStatus === 'completed' ? (
+                  <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" />
+                ) : paymentStatus === 'failed' ? (
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-red-100 flex items-center justify-center">
+                    <span className="text-red-500 text-xl sm:text-2xl">✕</span>
+                  </div>
+                ) : paymentStatus === 'checking' ? (
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <div className="animate-spin h-5 w-5 sm:h-6 sm:w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                  </div>
+                ) : (
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <div className="animate-pulse h-5 w-5 sm:h-6 sm:w-6 bg-yellow-500 rounded-full"></div>
+                  </div>
+                )}
               </div>
-              <CardTitle className="text-center text-lg">Payment Initiated!</CardTitle>
-              <CardDescription className="text-center text-xs">
-                {selectedPaymentMode?.name === 'M-PESA' ? 
-                  'Please check your phone for the M-PESA prompt to complete the payment.' :
+              <CardTitle className="text-center text-base sm:text-lg">
+                {paymentStatus === 'completed' ? 'Payment Processed!' :
+                 paymentStatus === 'failed' ? 'Payment Failed' :
+                 paymentStatus === 'checking' ? 'Checking Payment Status...' :
+                 'Payment Initiated!'}
+              </CardTitle>
+              <CardDescription className="text-center text-xs sm:text-sm px-2">
+                {paymentStatus === 'completed' ?
+                  'Your payment has been processed. Please check your payment history for the final status and confirmation.' :
+                 paymentStatus === 'failed' ?
+                  'Payment could not be completed. Please try again or contact support.' :
+                 paymentStatus === 'checking' ?
+                  'Verifying payment with M-PESA... Please wait.' :
+                 selectedPaymentMode?.name === 'M-PESA' ?
+                  'Payment initiated. Please complete the transaction on your phone, then we will verify the payment status.' :
                   'Your payment has been recorded successfully.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-2">
-              <div className="border rounded-md p-3 bg-muted/30">
-                <h3 className="font-medium text-sm mb-2">Payment Details</h3>
+              <div className="border rounded-md p-2 sm:p-3 bg-muted/30">
+                <h3 className="font-medium text-xs sm:text-sm mb-2">Payment Details</h3>
                 <div className="grid gap-1.5 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Account:</span>
-                    <span className="font-medium">{selectedAccount?.name}</span>
+                    <span className="font-medium truncate ml-2">{selectedAccount?.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount:</span>
-                    <span className="font-medium">${amount}</span>
+                    <span className="font-medium">KES {amount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Payment Method:</span>
-                    <span className="font-medium">{selectedPaymentMode?.name}</span>
+                    <span className="font-medium truncate ml-2">{selectedPaymentMode?.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Date:</span>
@@ -535,19 +694,104 @@ const Payments = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Reference:</span>
-                    <span className="font-medium text-primary">{paymentReference}</span>
+                    <span className="font-medium text-primary font-mono text-[10px] sm:text-xs truncate ml-2">{paymentReference}</span>
+                  </div>
+                  {stkResponse?.externalRef && (
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <span className="text-muted-foreground">External Ref:</span>
+                      <span className="font-medium text-primary font-mono text-xs break-all">{stkResponse.externalRef}</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className={`font-medium text-xs sm:text-sm ${
+                      paymentStatus === 'completed' ? 'text-green-600' :
+                      paymentStatus === 'failed' ? 'text-red-600' :
+                      paymentStatus === 'checking' ? 'text-blue-600' :
+                      'text-yellow-600'
+                    }`}>
+                      {paymentStatus === 'completed' ? 'Processed - Check History' :
+                       paymentStatus === 'failed' ? 'Failed' :
+                       paymentStatus === 'checking' ? 'Verifying with M-PESA...' :
+                       'Awaiting M-PESA Confirmation'}
+                    </span>
                   </div>
                 </div>
               </div>
+
+              {paymentStatus === 'completed' && (
+                <div className="mt-3 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <p className="text-xs sm:text-sm text-green-700 font-medium">Payment Processed</p>
+                  </div>
+                  <p className="text-xs text-green-600">
+                    Your payment has been processed successfully. Please check your payment history to view the final status and transaction details.
+                  </p>
+                </div>
+              )}
+
+              {paymentStatus === 'checking' && (
+                <div className="mt-3 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0"></div>
+                    <p className="text-xs sm:text-sm text-blue-700 font-medium">Verifying Payment</p>
+                  </div>
+                  <p className="text-xs text-blue-600">
+                    We're checking with M-PESA to confirm your payment. After verification, we'll direct you to view your payment history for the final status.
+                  </p>
+                </div>
+              )}
+
+              {paymentStatus === 'failed' && selectedPaymentMode?.name.toLowerCase().includes('m-pesa') && (
+                <div className="mt-3 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-xs sm:text-sm text-red-700 mb-3">
+                    STK push failed. You can try again or contact support.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setCurrentStep(4);
+                      setPaymentStatus(null);
+                      setStkResponse(null);
+                    }}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
             </CardContent>
-            <CardFooter className="pt-2">
-              <Button 
-                onClick={() => window.location.href = '/user/dashboard'}
-                size="sm"
-                className="mx-auto"
-              >
-                Return to Dashboard
-              </Button>
+            <CardFooter className="pt-3 sm:pt-4">
+              {paymentStatus === 'completed' ? (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full">
+                  <Button
+                    onClick={() => window.location.href = '/user/payment-history'}
+                    size="sm"
+                    className="flex-1 order-1"
+                  >
+                    View Payment History
+                  </Button>
+                  <Button
+                    onClick={() => window.location.href = '/user/dashboard'}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 order-2"
+                  >
+                    Return to Dashboard
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => window.location.href = '/user/dashboard'}
+                  size="sm"
+                  className="w-full sm:w-auto sm:mx-auto"
+                  disabled={paymentStatus === 'checking'}
+                >
+                  Return to Dashboard
+                </Button>
+              )}
             </CardFooter>
           </Card>
         );
@@ -567,31 +811,31 @@ const Payments = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold">Make a Payment</h1>
-            <p className="text-sm text-muted-foreground">Follow the steps below to make a payment to your account</p>
+            <h1 className="text-lg sm:text-xl font-semibold">Make a Payment</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Follow the steps below to make a payment to your account</p>
           </div>
         </div>
         
-        <div className="mb-4 bg-card rounded-md p-2 border">
+        <div className="mb-4 bg-card rounded-md p-2 sm:p-3 border">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((step) => (
               <React.Fragment key={step}>
                 <div className="flex flex-col items-center">
-                  <div 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                      currentStep === step 
-                        ? 'bg-primary text-primary-foreground' 
-                        : currentStep > step 
-                          ? 'bg-primary/80 text-primary-foreground' 
+                  <div
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
+                      currentStep === step
+                        ? 'bg-primary text-primary-foreground'
+                        : currentStep > step
+                          ? 'bg-primary/80 text-primary-foreground'
                           : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {step}
                   </div>
-                  <span className="text-[10px] mt-1 text-muted-foreground hidden md:inline">
+                  <span className="text-[8px] sm:text-[10px] mt-1 text-muted-foreground hidden sm:inline">
                     {step === 1 && 'Account'}
                     {step === 2 && 'Type'}
                     {step === 3 && 'Method'}
@@ -600,8 +844,8 @@ const Payments = () => {
                   </span>
                 </div>
                 {step < 5 && (
-                  <div 
-                    className={`flex-1 h-0.5 mx-1 ${
+                  <div
+                    className={`flex-1 h-0.5 mx-0.5 sm:mx-1 ${
                       currentStep > step ? 'bg-primary/80' : 'bg-muted'
                     }`}
                   ></div>

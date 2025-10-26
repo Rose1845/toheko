@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { Calendar, ChevronLeft, ChevronRight, CreditCard, Download, Filter, Search, Wallet } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CreditCard, Download, Filter, RefreshCw, Search, Wallet } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
-import { userPaymentService, PaymentHistory, PaymentHistoryResponse } from '@/services/user-services/userPaymentService';
+import { userPaymentService, PaymentHistory, PaymentHistoryResponse, PaymentKPIs } from '@/services/user-services/userPaymentService';
 
 // JWT token interface
 interface TohekoJwtPayload {
@@ -26,6 +26,11 @@ const PaymentHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // KPI state
+  const [kpis, setKpis] = useState<PaymentKPIs | null>(null);
+  const [kpisLoading, setKpisLoading] = useState(true);
+  const [kpisError, setKpisError] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -54,7 +59,7 @@ const PaymentHistoryPage = () => {
   };
 
   // Fetch payment history
-  const fetchPaymentHistory = async (page: number = 0) => {
+  const fetchPaymentHistory = async (page: number = 0, showRefreshToast: boolean = false) => {
     try {
       setLoading(true);
       const userId = getUserId();
@@ -70,6 +75,10 @@ const PaymentHistoryPage = () => {
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
       setError('');
+
+      if (showRefreshToast) {
+        toast.success('Payment history refreshed successfully!');
+      }
     } catch (error) {
       console.error('Error fetching payment history:', error);
       setError('Failed to load payment history');
@@ -77,6 +86,33 @@ const PaymentHistoryPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch payment KPIs
+  const fetchPaymentKPIs = async () => {
+    try {
+      setKpisLoading(true);
+      const userId = getUserId();
+      if (!userId) {
+        setKpisError('User not authenticated');
+        return;
+      }
+
+      const kpiData = await userPaymentService.getPaymentKPIs(userId);
+      setKpis(kpiData);
+      setKpisError('');
+    } catch (error) {
+      console.error('Error fetching payment KPIs:', error);
+      setKpisError('Failed to load payment statistics');
+    } finally {
+      setKpisLoading(false);
+    }
+  };
+
+  // Refresh payment history
+  const refreshPaymentHistory = () => {
+    fetchPaymentHistory(currentPage, true);
+    fetchPaymentKPIs(); // Also refresh KPIs
   };
 
   // Export payment history as CSV
@@ -148,7 +184,21 @@ const PaymentHistoryPage = () => {
   // Load data on component mount
   useEffect(() => {
     fetchPaymentHistory();
+    fetchPaymentKPIs();
   }, []);
+
+  // Add keyboard shortcut for refresh
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+        event.preventDefault();
+        refreshPaymentHistory();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentPage]);
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
@@ -186,9 +236,9 @@ const PaymentHistoryPage = () => {
 
   // Format amount
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'KES',
       minimumFractionDigits: 2
     }).format(amount);
   };
@@ -203,40 +253,152 @@ const PaymentHistoryPage = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-2xl font-semibold">Payment History</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl font-semibold">Payment History</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               View all your payment transactions and their status
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
               Total: {totalElements} payments
             </div>
-            <Button 
-              onClick={exportPaymentHistory}
-              disabled={exportLoading || totalElements === 0}
-              variant="outline"
-              size="sm"
-            >
-              {exportLoading ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={refreshPaymentHistory}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                title="Refresh payment history (Ctrl+R)"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={exportPaymentHistory}
+                disabled={exportLoading || totalElements === 0}
+                variant="outline"
+                size="sm"
+              >
+                {exportLoading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
+
+        {/* Payment KPIs */}
+        {kpisLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : kpisError ? (
+          <Card className="mb-4 sm:mb-6 border-red-200 bg-red-50">
+            <CardContent className="pt-4">
+              <p className="text-red-600 text-sm">{kpisError}</p>
+            </CardContent>
+          </Card>
+        ) : kpis ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {/* Completed Payments */}
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-green-700">Completed</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-green-800">{kpis.completedCount}</h3>
+                    <p className="text-xs text-green-600">KES {kpis.completedAmount.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pending Payments */}
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-yellow-700">Pending</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-yellow-800">{kpis.pendingCount}</h3>
+                    <p className="text-xs text-yellow-600">KES {kpis.pendingAmount.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Failed Payments */}
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-red-700">Failed</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-red-800">{kpis.failedCount}</h3>
+                    <p className="text-xs text-red-600">KES {kpis.failedAmount.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Success Rate */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-blue-700">Success Rate</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-blue-800">{kpis.stkSuccessRate.toFixed(1)}%</h3>
+                    <p className="text-xs text-blue-600">STK Push</p>
+                  </div>
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -353,8 +515,57 @@ const PaymentHistoryPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Table */}
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Cards View */}
+                <div className="block md:hidden space-y-3">
+                  {filteredHistory.map((payment) => (
+                    <Card key={payment.paymentId} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-green-600 text-lg">
+                              {formatAmount(payment.amount)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(payment.paymentDate)}
+                            </p>
+                          </div>
+                          <Badge variant={getStatusBadgeVariant(payment.status)}>
+                            {payment.status}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Type</p>
+                            <p className="capitalize">{payment.paymentType}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Mode</p>
+                            <p className="capitalize">{payment.modeOfPayment}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Account</p>
+                            <p className="font-mono text-xs">{payment.accountNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Reference</p>
+                            <p className="font-mono text-xs truncate">{payment.transactionReference}</p>
+                          </div>
+                        </div>
+
+                        {payment.remarks && (
+                          <div>
+                            <p className="text-muted-foreground text-xs">Remarks</p>
+                            <p className="text-sm">{payment.remarks}</p>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -405,11 +616,19 @@ const PaymentHistoryPage = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Page {currentPage + 1} of {totalPages}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+                    <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+                      Showing {(currentPage * pageSize) + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} transactions
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(0)}
+                        disabled={currentPage === 0}
+                      >
+                        First
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -419,6 +638,31 @@ const PaymentHistoryPage = () => {
                         <ChevronLeft className="h-4 w-4" />
                         Previous
                       </Button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {(() => {
+                          const pages = [];
+                          const startPage = Math.max(0, currentPage - 2);
+                          const endPage = Math.min(totalPages - 1, currentPage + 2);
+
+                          for (let i = startPage; i <= endPage; i++) {
+                            pages.push(
+                              <Button
+                                key={i}
+                                variant={i === currentPage ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePageChange(i)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {i + 1}
+                              </Button>
+                            );
+                          }
+                          return pages;
+                        })()}
+                      </div>
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -427,6 +671,14 @@ const PaymentHistoryPage = () => {
                       >
                         Next
                         <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(totalPages - 1)}
+                        disabled={currentPage === totalPages - 1}
+                      >
+                        Last
                       </Button>
                     </div>
                   </div>

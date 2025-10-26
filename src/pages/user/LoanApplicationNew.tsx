@@ -131,7 +131,7 @@ const LoanApplication = () => {
     
     if (currentStep === 2) {
       if (!applicationForm.amount || Number(applicationForm.amount) < selectedLoanProduct!.minAmount || Number(applicationForm.amount) > selectedLoanProduct!.maxAmount) {
-        toast.error(`Amount must be between ${selectedLoanProduct!.minAmount} and ${selectedLoanProduct!.maxAmount}`);
+        toast.error(`Amount must be between KES ${selectedLoanProduct!.minAmount} and KES ${selectedLoanProduct!.maxAmount}`);
         return;
       }
       
@@ -451,7 +451,7 @@ const LoanApplication = () => {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-muted-foreground">Amount: </span>
-                            <span>${applicationForm.amount}</span>
+                            <span>KES {applicationForm.amount}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Term: </span>
@@ -531,7 +531,7 @@ const LoanApplication = () => {
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               <div>
                                 <span className="text-muted-foreground">Amount: </span>
-                                <span>${product.minAmount} - ${product.maxAmount}</span>
+                                <span>KES {product.minAmount} - KES {product.maxAmount}</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Interest: </span>
@@ -539,7 +539,7 @@ const LoanApplication = () => {
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Term: </span>
-                                <span>{product.minTermDays} - ${product.maxTermDays} days</span>
+                                <span>{product.minTermDays} - {product.maxTermDays} days</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Code: </span>
@@ -603,7 +603,7 @@ const LoanApplication = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <span className="text-muted-foreground">Loan Amount: </span>
-                          <span className="font-medium">${applicationForm.amount}</span>
+                          <span className="font-medium">KES {applicationForm.amount}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Term: </span>
@@ -650,8 +650,9 @@ const LoanApplication = () => {
                       <Label htmlFor="amount">Loan Amount</Label>
                       <Input
                         id="amount"
+                        required
                         type="number"
-                        placeholder={`${selectedLoanProduct?.minAmount} - ${selectedLoanProduct?.maxAmount}`}
+                        placeholder={`KES ${selectedLoanProduct?.minAmount} - KES ${selectedLoanProduct?.maxAmount}`}
                         value={applicationForm.amount}
                         onChange={(e) => setApplicationForm({...applicationForm, amount: e.target.value})}
                       />
@@ -661,6 +662,7 @@ const LoanApplication = () => {
                       <Input
                         id="termDays"
                         type="number"
+                        required
                         placeholder={`${selectedLoanProduct?.minTermDays} - ${selectedLoanProduct?.maxTermDays}`}
                         value={applicationForm.termDays}
                         onChange={(e) => setApplicationForm({...applicationForm, termDays: e.target.value})}
@@ -1083,7 +1085,7 @@ const LoanApplication = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Amount:</span>
-                      <span className="font-medium">${applicationForm.amount}</span>
+                      <span className="font-medium">KES {applicationForm.amount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Term:</span>

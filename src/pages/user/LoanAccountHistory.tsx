@@ -163,11 +163,11 @@ const LoanAccountHistory = () => {
 
   // Format amount
   const formatAmount = (amount: number, currency: string = 'KES') => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: currency === 'KES' ? 'USD' : currency, // Using USD as fallback for display
+      currency: 'KES',
       minimumFractionDigits: 2
-    }).format(amount).replace('$', currency + ' ');
+    }).format(amount);
   };
 
   // Get unique values for filters
@@ -180,43 +180,43 @@ const LoanAccountHistory = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-2xl font-semibold">Loan Account History</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-lg sm:text-2xl font-semibold">Loan Account History</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               View all your loan accounts and their current status
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
               Total: {totalElements} accounts
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
               Filters
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {/* Search */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search</label>
+                <label className="text-xs sm:text-sm font-medium">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search accounts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 sm:pl-10 text-sm"
                   />
                 </div>
               </div>
@@ -262,12 +262,12 @@ const LoanAccountHistory = () => {
 
         {/* Loan Accounts Table */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
               Loan Accounts
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Showing {filteredAccounts.length} of {totalElements} loan accounts
             </CardDescription>
           </CardHeader>
@@ -294,8 +294,58 @@ const LoanAccountHistory = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Table */}
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Cards View */}
+                <div className="block md:hidden space-y-3">
+                  {filteredAccounts.map((account) => (
+                    <Card key={account.id} className="p-4 border-l-4 border-l-blue-500">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium font-mono text-sm">{account.accountNo}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Opened: {formatDate(account.openedAt)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={getStatusBadgeVariant(account.status)} className="text-xs">
+                              {account.status.replace(/_/g, ' ')}
+                            </Badge>
+                            <Badge variant={getPhaseBadgeVariant(account.phase)} className="text-xs">
+                              {account.phase}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Principal</p>
+                            <p className="font-semibold">{formatAmount(account.principalAmount, account.currency)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Outstanding</p>
+                            <p className="font-semibold text-orange-600">{formatAmount(account.outstandingPrincipal, account.currency)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Interest Rate</p>
+                            <p className="font-medium">{account.interestRate > 0 ? `${account.interestRate}%` : '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Term</p>
+                            <p className="font-medium">{account.termDays > 0 ? `${account.termDays} days` : '-'}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-muted-foreground text-xs">Maturity Date</p>
+                          <p className="text-sm">{formatDate(account.maturityDate)}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
