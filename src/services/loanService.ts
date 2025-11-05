@@ -238,7 +238,7 @@ export const loanService = {
   },
 
   disburseLoanAccount: async (payload: { loanAccountId: number; amount: number; remarks: string }) => {
-    const response = await apiClient.post('/api/v1/loan-accounts/disburse', payload);
+    const response = await apiClient.post('/api/v1/loan-disbursements/disburse', payload);
     return response.data;
   },
 
