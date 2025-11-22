@@ -50,18 +50,31 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const menuItems = [
-    { label: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/user/dashboard" },
-    { label: "Payments", icon: <Wallet size={20} />, path: "/user/payments" },
-    { label: "Savings", icon: <History size={20} />, path: "/user/payment-history" },
-    { label: "Loans", icon: <CreditCard size={20} />, path: "/user/loans" },
-    { label: "Loan Accounts", icon: <Building2 size={20} />, path: "/user/loan-account-history" },
-    { label: "Loan Summary", icon: <TrendingUp size={20} />, path: "/user/loan-application-summary" },
-    { label: "Apply for Loan", icon: <FileText size={20} />, path: "/user/loan-application" },
-    // { label: "Savings", icon: <PiggyBank size={20} />, path: "/user/savings" },
-    { label: "Statements", icon: <FileText size={20} />, path: "/user/statements" },
-    { label: "Profile", icon: <User size={20} />, path: "/user/profile" },
-    { label: "Settings", icon: <Settings size={20} />, path: "/user/settings" },
+  const menuSections = [
+    {
+      title: "Overview",
+      items: [
+        { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/user/dashboard" },
+      ]
+    },
+    {
+      title: "Financial",
+      items: [
+        { label: "Payments", icon: <Wallet size={18} />, path: "/user/payments" },
+        { label: "Savings", icon: <PiggyBank size={18} />, path: "/user/payment-history" },
+        { label: "My Loans", icon: <CreditCard size={18} />, path: "/user/loans" },
+        { label: "Loan Summary", icon: <TrendingUp size={18} />, path: "/user/loan-application-summary" },
+        { label: "Apply for Loan", icon: <FileText size={18} />, path: "/user/loan-application" },
+        { label: "Statements", icon: <History size={18} />, path: "/user/statements" },
+      ]
+    },
+    {
+      title: "Account",
+      items: [
+        { label: "Profile", icon: <User size={18} />, path: "/user/profile" },
+        { label: "Settings", icon: <Settings size={18} />, path: "/user/settings" },
+      ]
+    }
   ];
 
   const handleLogout = () => {
@@ -78,59 +91,83 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
     <div className="min-h-screen w-full flex bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`${sidebarState.isOpen ? "translate-x-0" : "-translate-x-full"} 
-                ${sidebarState.collapsed && !sidebarState.isMobile ? "w-16" : "w-56"} 
-                fixed left-0 top-0 z-20 h-screen flex flex-col border-r bg-background p-3 
-                transition-all duration-300 ease-in-out md:translate-x-0`}
+        className={`${sidebarState.isOpen ? "translate-x-0" : "-translate-x-full"}
+                ${sidebarState.collapsed && !sidebarState.isMobile ? "w-16" : "w-60"}
+                fixed left-0 top-0 z-20 h-screen flex flex-col border-r bg-background
+                transition-all duration-300 ease-in-out md:translate-x-0 shadow-sm`}
       >
-        <div className="flex h-12 items-center border-b pb-2 justify-between">
+        {/* Header */}
+        <div className="flex h-14 items-center border-b px-3 justify-between">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-sacco-500 to-success-500 flex items-center justify-center text-white font-bold text-base">
-              M
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              TS
             </div>
-            {!sidebarState.collapsed && <h1 className="text-lg font-semibold ml-2 truncate">Member Portal</h1>}
+            {!sidebarState.collapsed && (
+              <div className="ml-3">
+                <h1 className="text-sm font-semibold leading-none">TohekoSACCO</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">Member Portal</p>
+              </div>
+            )}
           </div>
           {!sidebarState.isMobile && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setSidebarState(prev => ({ ...prev, collapsed: !prev.collapsed }))} 
-              className="h-9 w-9">
-              {sidebarState.collapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarState(prev => ({ ...prev, collapsed: !prev.collapsed }))}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground">
+              {sidebarState.collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
             </Button>
           )}
         </div>
 
-        <nav className="flex-1 py-3 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.label}
-                to={item.path}
-                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-                title={sidebarState.collapsed ? item.label : ""}
-              >
-                <span className={`flex-shrink-0 ${!sidebarState.collapsed ? "mr-2" : "mx-auto"}`}>{item.icon}</span>
-                {!sidebarState.collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
+        {/* Navigation */}
+        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+          {menuSections.map((section, sectionIndex) => (
+            <div key={section.title} className={sectionIndex > 0 ? "mt-6" : ""}>
+              {!sidebarState.collapsed && (
+                <h3 className="px-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {section.title}
+                </h3>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      onClick={() => sidebarState.isMobile && toggleSidebar()}
+                      className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-150 ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                      title={sidebarState.collapsed ? item.label : ""}
+                    >
+                      <span className={`flex-shrink-0 ${!sidebarState.collapsed ? "mr-3" : "mx-auto"}`}>
+                        {item.icon}
+                      </span>
+                      {!sidebarState.collapsed && (
+                        <span className="truncate font-medium">{item.label}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="mt-auto border-t pt-2">
+        {/* Footer */}
+        <div className="border-t p-3">
           <Button
             variant="ghost"
-            className={`w-full flex items-center justify-${sidebarState.collapsed ? "center" : "start"} px-2 py-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive`}
+            className={`w-full flex items-center ${sidebarState.collapsed ? "justify-center" : "justify-start"} px-2 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors`}
             onClick={handleLogout}
             title={sidebarState.collapsed ? "Logout" : ""}
           >
-            <LogOut className={`h-5 w-5 ${!sidebarState.collapsed ? "mr-2" : ""}`} />
-            {!sidebarState.collapsed && <span className="truncate">Logout</span>}
+            <LogOut className={`h-4 w-4 ${!sidebarState.collapsed ? "mr-3" : ""}`} />
+            {!sidebarState.collapsed && <span className="font-medium">Logout</span>}
           </Button>
         </div>
       </aside>
@@ -147,12 +184,12 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
                    ${sidebarState.isOpen && !sidebarState.isMobile
-                       ? sidebarState.collapsed ? "md:ml-20" : "md:ml-64"
+                       ? sidebarState.collapsed ? "md:ml-16" : "md:ml-60"
                        : "ml-0"
                    }`}
       >
         <UserDashboardHeader toggleSidebar={toggleSidebar} sidebarOpen={sidebarState.isOpen} />
-        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
