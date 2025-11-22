@@ -49,6 +49,16 @@ export const paymentService = {
     }
   },
 
+  getPaymentKpis: async (): Promise<any> => {
+    try {
+      const response = await apiClient.get('/api/v1/payments/kpis');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching payment KPIs:', error);
+      throw error;
+    }
+  },
+
   getPaymentById: async (paymentId: number): Promise<Payment> => {
     try {
       console.log(`Fetching payment with ID: ${paymentId}`);

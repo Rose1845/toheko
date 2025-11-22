@@ -172,16 +172,17 @@ const AccountTypes = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-6">
         <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle>Account Types</CardTitle>
-              <CardDescription>Manage the account types offered by your SACCO</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Account Types</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Manage the account types offered by your SACCO</CardDescription>
             </div>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button 
+                <Button
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     resetForm();
                     setIsEditMode(false);

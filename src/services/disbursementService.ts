@@ -3,6 +3,41 @@ import { Disbursement, DisbursementRequest, DisbursementCompleteRequest, Disburs
 
 const API_URL = "https://sacco-app-production.up.railway.app/api/v1";
 
+// Disbursement KPI interfaces
+export interface DisbursementKPI {
+  totalCount: number;
+  totalAmount: number;
+  avgAmount: number;
+  minAmount: number;
+  maxAmount: number;
+  uniqueMembers: number;
+  byStatus: Array<{
+    status: string;
+    count: number;
+    amount: number;
+  }>;
+  byChannel: Array<{
+    channel: string;
+    count: number;
+    amount: number;
+  }>;
+  executedCount: number;
+  failedCount: number;
+  successRate: number;
+  approvalRate: number;
+  daily: Array<{
+    date: string;
+    count: number;
+    amount: number;
+  }>;
+  topMembers: Array<{
+    memberId: number;
+    memberName: string;
+    count: number;
+    amount: number;
+  }>;
+}
+
 export const disbursementService = {
   // Get all disbursements
   getAllDisbursements: async (): Promise<Disbursement[]> => {
@@ -97,5 +132,11 @@ export const disbursementService = {
       }
     });
     return response.data;
+  },
+
+  // Get disbursement KPIs
+  getKPIs: async (): Promise<DisbursementKPI> => {
+    const response = await axios.get(`${API_URL}/loan-disbursements/kpi`);
+    return response.data.data;
   },
 };

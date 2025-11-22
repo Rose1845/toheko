@@ -180,94 +180,90 @@ const LoanAccountHistory = () => {
 
   return (
     <UserDashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div>
-            <h1 className="text-lg sm:text-2xl font-semibold">Loan Account History</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+        <div className="mb-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-xl font-semibold">Loan Account History</h1>
+            <p className="text-xs text-muted-foreground">
               View all your loan accounts and their current status
             </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-              Total: {totalElements} accounts
+            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
+              <Calendar className="h-3 w-3" />
+              <span>Total: {totalElements} accounts</span>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="mb-4 sm:mb-6">
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Filter className="h-4 w-4" />
               Filters
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {/* Search */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search accounts..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 sm:pl-10 text-sm"
-                  />
-                </div>
+          <CardContent className="space-y-3">
+            {/* Search */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Search</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search accounts..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 text-sm h-9"
+                />
               </div>
+            </div>
 
-              {/* Status Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {getUniqueValues('status').map((status) => (
-                      <SelectItem key={status} value={status.toLowerCase()}>
-                        {status.replace(/_/g, ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Status Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {getUniqueValues('status').map((status) => (
+                    <SelectItem key={status} value={status.toLowerCase()}>
+                      {status.replace(/_/g, ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Phase Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Phase</label>
-                <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All phases" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Phases</SelectItem>
-                    {getUniqueValues('phase').map((phase) => (
-                      <SelectItem key={phase} value={phase.toLowerCase()}>
-                        {phase}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Phase Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Phase</label>
+              <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All phases" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Phases</SelectItem>
+                  {getUniqueValues('phase').map((phase) => (
+                    <SelectItem key={phase} value={phase.toLowerCase()}>
+                      {phase}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
         {/* Loan Accounts Table */}
         <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
               Loan Accounts
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
+            <CardDescription className="text-xs">
               Showing {filteredAccounts.length} of {totalElements} loan accounts
             </CardDescription>
           </CardHeader>
@@ -297,47 +293,47 @@ const LoanAccountHistory = () => {
                 {/* Mobile Cards View */}
                 <div className="block md:hidden space-y-3">
                   {filteredAccounts.map((account) => (
-                    <Card key={account.id} className="p-4 border-l-4 border-l-blue-500">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium font-mono text-sm">{account.accountNo}</p>
-                            <p className="text-xs text-muted-foreground">
+                    <Card key={account.id} className="p-3 border-l-4 border-l-blue-500">
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium font-mono text-xs truncate">{account.accountNo}</p>
+                            <p className="text-[10px] text-muted-foreground">
                               Opened: {formatDate(account.openedAt)}
                             </p>
                           </div>
-                          <div className="flex flex-col gap-1">
-                            <Badge variant={getStatusBadgeVariant(account.status)} className="text-xs">
+                          <div className="flex flex-col gap-1 flex-shrink-0">
+                            <Badge variant={getStatusBadgeVariant(account.status)} className="text-[10px] px-1.5 py-0">
                               {account.status.replace(/_/g, ' ')}
                             </Badge>
-                            <Badge variant={getPhaseBadgeVariant(account.phase)} className="text-xs">
+                            <Badge variant={getPhaseBadgeVariant(account.phase)} className="text-[10px] px-1.5 py-0">
                               {account.phase}
                             </Badge>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <p className="text-muted-foreground text-xs">Principal</p>
-                            <p className="font-semibold">{formatAmount(account.principalAmount, account.currency)}</p>
+                            <p className="text-muted-foreground text-[10px]">Principal</p>
+                            <p className="font-semibold truncate">{formatAmount(account.principalAmount, account.currency)}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground text-xs">Outstanding</p>
-                            <p className="font-semibold text-orange-600">{formatAmount(account.outstandingPrincipal, account.currency)}</p>
+                            <p className="text-muted-foreground text-[10px]">Outstanding</p>
+                            <p className="font-semibold text-orange-600 truncate">{formatAmount(account.outstandingPrincipal, account.currency)}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground text-xs">Interest Rate</p>
+                            <p className="text-muted-foreground text-[10px]">Interest Rate</p>
                             <p className="font-medium">{account.interestRate > 0 ? `${account.interestRate}%` : '-'}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground text-xs">Term</p>
+                            <p className="text-muted-foreground text-[10px]">Term</p>
                             <p className="font-medium">{account.termDays > 0 ? `${account.termDays} days` : '-'}</p>
                           </div>
                         </div>
 
                         <div>
-                          <p className="text-muted-foreground text-xs">Maturity Date</p>
-                          <p className="text-sm">{formatDate(account.maturityDate)}</p>
+                          <p className="text-muted-foreground text-[10px]">Maturity Date</p>
+                          <p className="text-xs">{formatDate(account.maturityDate)}</p>
                         </div>
                       </div>
                     </Card>
@@ -345,7 +341,7 @@ const LoanAccountHistory = () => {
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block rounded-md border overflow-hidden">
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -400,62 +396,10 @@ const LoanAccountHistory = () => {
                   </Table>
                 </div>
 
-                {/* Additional Info Cards for mobile view */}
-                <div className="md:hidden space-y-4">
-                  {filteredAccounts.map((account) => (
-                    <Card key={account.id} className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium font-mono text-sm">{account.accountNo}</p>
-                            <p className="text-xs text-muted-foreground">Account Number</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Badge variant={getStatusBadgeVariant(account.status)} className="text-xs">
-                              {account.status.replace(/_/g, ' ')}
-                            </Badge>
-                            <Badge variant={getPhaseBadgeVariant(account.phase)} className="text-xs">
-                              {account.phase}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="font-semibold">{formatAmount(account.principalAmount, account.currency)}</p>
-                            <p className="text-xs text-muted-foreground">Principal Amount</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-orange-600">{formatAmount(account.outstandingPrincipal, account.currency)}</p>
-                            <p className="text-xs text-muted-foreground">Outstanding</p>
-                          </div>
-                          <div>
-                            <p className="font-medium">{account.interestRate > 0 ? `${account.interestRate}%` : '-'}</p>
-                            <p className="text-xs text-muted-foreground">Interest Rate</p>
-                          </div>
-                          <div>
-                            <p className="font-medium">{account.termDays > 0 ? `${account.termDays} days` : '-'}</p>
-                            <p className="text-xs text-muted-foreground">Term</p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">Opened: {formatDate(account.openedAt)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Maturity: {formatDate(account.maturityDate)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div className="text-xs text-muted-foreground">
                       Page {currentPage + 1} of {totalPages}
                     </div>
                     <div className="flex items-center gap-2">
@@ -464,18 +408,20 @@ const LoanAccountHistory = () => {
                         size="sm"
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 0}
+                        className="h-8 px-2"
                       >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
+                        <ChevronLeft className="h-3 w-3" />
+                        <span className="hidden sm:inline ml-1">Previous</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages - 1}
+                        className="h-8 px-2"
                       >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
+                        <span className="hidden sm:inline mr-1">Next</span>
+                        <ChevronRight className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>

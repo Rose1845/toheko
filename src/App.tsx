@@ -42,7 +42,7 @@ import PaymentHistory from "./pages/user/PaymentHistory";
 import UserLoans from "./pages/user/Loans";
 import LoanAccountHistory from "./pages/user/LoanAccountHistory";
 import LoanApplicationSummary from "./pages/user/LoanApplicationSummary";
-import UserSavings from "./pages/user/Savings";
+// import UserSavings from "./pages/user/Savings";
 import UserStatements from "./pages/user/Statements";
 import UserProfile from "./pages/user/Profile";
 import UserSettings from "./pages/user/Settings";
@@ -72,7 +72,7 @@ const App = () => (
             <Route path="loan-account-history" element={<LoanAccountHistory />} />
             <Route path="loan-application-summary" element={<LoanApplicationSummary />} />
             <Route path="loan-application" element={<LoanApplication />} />
-            <Route path="savings" element={<UserSavings />} />
+            {/* <Route path="savings" element={<UserSavings />} /> */}
             <Route path="statements" element={<UserStatements />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<UserSettings />} />

@@ -272,14 +272,14 @@ const LoanPenalties = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle>Loan Penalties</CardTitle>
-              <CardDescription>Manage the SACCO Loan Penalties</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Loan Penalties</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Manage the SACCO Loan Penalties</CardDescription>
             </div>
-            <Button onClick={handleAddNew}>
+            <Button onClick={handleAddNew} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Loan Penalties
             </Button>

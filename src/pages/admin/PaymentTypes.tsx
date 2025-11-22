@@ -261,11 +261,11 @@ const PaymentTypes = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Payment Types</CardTitle>
-            <Button onClick={() => setShowAddDialog(true)}>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <CardTitle className="text-lg sm:text-xl">Payment Types</CardTitle>
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Payment Type
             </Button>

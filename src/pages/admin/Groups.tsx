@@ -941,21 +941,21 @@ const Groups: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-10">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-10">
         <Tabs defaultValue="groups" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex justify-between items-center mb-4">
-            <TabsList>
-              <TabsTrigger value="groups">Groups</TabsTrigger>
-              <TabsTrigger value="officials">Group Officials</TabsTrigger>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-4 mb-4">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="groups" className="flex-1 sm:flex-none">Groups</TabsTrigger>
+              <TabsTrigger value="officials" className="flex-1 sm:flex-none">Officials</TabsTrigger>
             </TabsList>
-            
+
             {activeTab === "groups" ? (
-              <Button onClick={handleAddGroup}>
+              <Button onClick={handleAddGroup} className="w-full sm:w-auto">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add Group
               </Button>
             ) : (
-              <Button onClick={handleAddOfficial}>
+              <Button onClick={handleAddOfficial} className="w-full sm:w-auto">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add Official
               </Button>

@@ -491,13 +491,13 @@ const Accounts = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 sm:mb-8">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-1 sm:mb-2">
               Accounts Management
             </h1>
-            <p className="text-gray-500">View and manage all SACCO accounts</p>
+            <p className="text-xs sm:text-sm text-gray-500">View and manage all SACCO accounts</p>
           </div>
         </div>
 

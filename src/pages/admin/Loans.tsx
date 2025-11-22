@@ -6,17 +6,25 @@ import { loanService } from "@/services/loanService";
 import { LoanApplication, LoanProduct } from "@/types/api";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { memberService } from "@/services/memberService";
 import { paymentTypeService } from "@/services/paymentTypeService";
 import { Column, DataTable } from "@/components/ui/data-table";
-import { Plus } from "lucide-react";
+import { Plus, FileText, Clock, CheckCircle, XCircle, AlertCircle, Loader2, TrendingUp, DollarSign } from "lucide-react";
 import LoanApplicationForm from "./loans/LoanApplication";
 import { useForm } from "react-hook-form";
 import LoanDetailsModal from "./LoanDetailsModal";
 import ReviewLoanModal from "./ReviewLoanModal";
-import LoanStatsCards from "@/components/dashboard/LoanStatsCards";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 
 const Loans = () => {
   const [showForm, setShowForm] = useState(false);
@@ -197,20 +205,13 @@ const Loans = () => {
       accessorKey: "status",
       sortable: true,
       cell: (loan) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${loan.status === "PENDING"
-              ? "bg-blue-100 text-blue-800"
-              : loan.status === "DISBURSED"
-                ? "bg-green-100 text-green-800"
-                : loan.status === "REJECTED"
-                  ? "bg-red-100 text-red-800"
-                  : loan.status === "APPROVED"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-            }`}
-        >
-          {loan?.status}
-        </span>
+        <Badge variant={
+          loan.status === "APPROVED" || loan.status === "DISBURSED" ? 'default' :
+          loan.status === "PENDING" ? 'secondary' :
+          loan.status === "UNDER_REVIEW" ? 'outline' : 'destructive'
+        }>
+          {loan.status.replace(/_/g, ' ')}
+        </Badge>
       ),
     },
     {
@@ -373,63 +374,201 @@ const Loans = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <div className="mb-4 flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Loans Management
-              </h1>
-              <p className="text-gray-500">
-                View and manage all loan applications and loan types
-              </p>
-            </div>
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Loans Management</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              View and manage all loan applications and loan types
+            </p>
           </div>
+          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2 w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            New Loan Application
+          </Button>
         </div>
-        {/* Loan Stats Cards */}
-        <LoanStatsCards loanStats={loanStats} />
 
-        <div className="flex justify-end mb-4">
-          <div className="text-center mt-5">
-            <Button
-              onClick={() => setShowForm(true)}
-              size="lg"
-            // className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Start New Loan Application
-            </Button>
-          </div>
-          <LoanApplicationForm showForm={showForm} setShowForm={setShowForm} editLoan={editLoan} />
-        </div>
-        
+        <LoanApplicationForm showForm={showForm} setShowForm={setShowForm} editLoan={editLoan} />
+
+        {/* KPI Section */}
+        <Accordion type="single" collapsible defaultValue="kpis" className="w-full">
+          <AccordionItem value="kpis">
+            <AccordionTrigger className="text-lg font-semibold">
+              Loan Application KPIs
+            </AccordionTrigger>
+            <AccordionContent>
+              {!loanStats ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading KPIs...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Total Applications */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Total Applications
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalApplications || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        All loan applications
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Pending */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Pending
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalPending || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Awaiting review
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Approved */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Approved
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalApproved || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        KES {Number(loanStats.totalAmountApproved || 0).toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Disbursed */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Disbursed
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalDisbursed || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Successfully disbursed
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Under Review */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Under Review
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalUnderReview || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Being reviewed
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Rejected */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <XCircle className="h-4 w-4" />
+                        Rejected
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{loanStats.totalRejected || 0}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        KES {Number(loanStats.totalAmountRejected || 0).toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Total Amount Applied */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Total Amount Applied
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">KES {Number(loanStats.totalAmountApplied || 0).toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Avg: KES {Number(loanStats.averageLoanAmount || 0).toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Highest Loan */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Highest Loan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">KES {Number(loanStats.highestLoanAmount || 0).toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Lowest: KES {Number(loanStats.lowestLoanAmount || 0).toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {/* Loan Applications Table */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Loan Applications</CardTitle>
+            <CardDescription>Filter and manage loan applications</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="flex gap-4 mb-6 items-end" onSubmit={handleFilterSubmit}>
-              <div>
-                <label className="block text-sm font-medium mb-1">Search</label>
-                <input type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="border rounded px-2 py-1 w-40" />
+            <form className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6" onSubmit={handleFilterSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <Input id="search" type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} placeholder="Search loans..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Amount</label>
-                <input type="number" value={filterMinAmount} onChange={e => setFilterMinAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              <div className="space-y-2">
+                <Label htmlFor="minAmount">Min Amount</Label>
+                <Input id="minAmount" type="number" value={filterMinAmount} onChange={e => setFilterMinAmount(e.target.value)} placeholder="0" min="0" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Max Amount</label>
-                <input type="number" value={filterMaxAmount} onChange={e => setFilterMaxAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              <div className="space-y-2">
+                <Label htmlFor="maxAmount">Max Amount</Label>
+                <Input id="maxAmount" type="number" value={filterMaxAmount} onChange={e => setFilterMaxAmount(e.target.value)} placeholder="0" min="0" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Created From</label>
-                <input type="date" value={filterCreatedFrom} onChange={e => setFilterCreatedFrom(e.target.value)} className="border rounded px-2 py-1 w-40" />
+              <div className="space-y-2">
+                <Label htmlFor="createdFrom">Created From</Label>
+                <Input id="createdFrom" type="date" value={filterCreatedFrom} onChange={e => setFilterCreatedFrom(e.target.value)} />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Created To</label>
-                <input type="date" value={filterCreatedTo} onChange={e => setFilterCreatedTo(e.target.value)} className="border rounded px-2 py-1 w-40" />
+              <div className="space-y-2">
+                <Label htmlFor="createdTo">Created To</Label>
+                <Input id="createdTo" type="date" value={filterCreatedTo} onChange={e => setFilterCreatedTo(e.target.value)} />
               </div>
-              <Button type="submit" variant="secondary" disabled={searchLoading}>Filter</Button>
+              <div className="flex items-end">
+                <Button type="submit" variant="secondary" disabled={searchLoading} className="w-full">
+                  {searchLoading ? "Filtering..." : "Apply Filters"}
+                </Button>
+              </div>
             </form>
             <DataTable
               data={loans}

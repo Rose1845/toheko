@@ -8,7 +8,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, Bell } from "lucide-react";
+import { CalendarIcon, Bell, Search } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ const Payments = () => {
   const [activeTab, setActiveTab] = useState("payments");
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredAccount, setFilteredAccount] = useState<number | null>(null);
+  const [accountSearchTerm, setAccountSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
@@ -300,12 +301,12 @@ const Payments = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1 sm:mb-2">
             Payments Management
           </h1>
-          <p className="text-gray-500">View and manage all SACCO payments</p>
+          <p className="text-xs sm:text-sm text-gray-500">View and manage all SACCO payments</p>
         </div>
 
         <Tabs
@@ -325,30 +326,57 @@ const Payments = () => {
               </CardHeader>
               <div className="flex justify-between items-center mb-4 px-6">
                 <div className="flex items-center space-x-2">
-                  <Select 
-                    value={filteredAccount?.toString() || "all"}
-                    onValueChange={(value) => handleAccountFilter(value)}
-                  >
-                    <SelectTrigger className="w-[250px]">
-                      <SelectValue placeholder="Filter by account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Accounts</SelectItem>
-                      {allAccounts?.map((account) => (
-                        <SelectItem key={account.accountId} value={account.accountId.toString()}>
-                          {account.name} - {account.accountNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search accounts..."
+                      value={accountSearchTerm}
+                      onChange={(e) => setAccountSearchTerm(e.target.value)}
+                      className="w-[300px] pl-9"
+                    />
+                    {accountSearchTerm && (
+                      <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <div
+                          className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                          onClick={() => {
+                            handleAccountFilter('all');
+                            setAccountSearchTerm("");
+                          }}
+                        >
+                          All Accounts
+                        </div>
+                        {allAccounts
+                          ?.filter((account) =>
+                            `${account.name} ${account.accountNumber}`
+                              .toLowerCase()
+                              .includes(accountSearchTerm.toLowerCase())
+                          )
+                          .map((account) => (
+                            <div
+                              key={account.accountId}
+                              className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                              onClick={() => {
+                                handleAccountFilter(account.accountId.toString());
+                                setAccountSearchTerm(`${account.name} - ${account.accountNumber}`);
+                              }}
+                            >
+                              {account.name} - {account.accountNumber}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                   {filteredAccount && (
-                    <Button variant="outline" size="sm" onClick={() => handleAccountFilter('all')}>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      handleAccountFilter('all');
+                      setAccountSearchTerm("");
+                    }}>
                       Clear Filter
                     </Button>
                   )}
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
+                  <Button
                     onClick={() => setShowPromptDialog(true)}
                     variant="outline"
                     className="flex items-center gap-2"

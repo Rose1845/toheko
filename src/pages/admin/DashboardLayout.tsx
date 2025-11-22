@@ -39,7 +39,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <DashboardSidebar />
 
         <div
-          className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
+          className={`flex-1 flex flex-col transition-all duration-300 ease-in-out min-w-0
                      ${
                        sidebarState.isOpen && !sidebarState.isMobile
                          ? sidebarState.collapsed

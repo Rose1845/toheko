@@ -410,13 +410,13 @@ const Members = () => {
         </Card>
       </div>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <CardTitle>Members</CardTitle>
-            <CardDescription>Manage SACCO members and their next of kin
+            <CardTitle className="text-lg sm:text-xl">Members</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Manage SACCO members and their next of kin
             </CardDescription>
           </div>
-          <Button onClick={handleAddMember}>
+          <Button onClick={handleAddMember} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Member
           </Button>
@@ -465,8 +465,8 @@ const Members = () => {
               className="space-y-6 pt-2"
             >
               {activeTab === "member" ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <FormField
                       control={form.control}
                       name="firstName"
@@ -591,7 +591,7 @@ const Members = () => {
                           <X className="h-4 w-4" />
                         </Button>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name={`nextOfKins.${index}.name`}

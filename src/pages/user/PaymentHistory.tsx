@@ -58,7 +58,7 @@ const PaymentHistoryPage = () => {
     }
   };
 
-  // Fetch payment history
+  // Fetch Savings
   const fetchPaymentHistory = async (page: number = 0, showRefreshToast: boolean = false) => {
     try {
       setLoading(true);
@@ -77,12 +77,12 @@ const PaymentHistoryPage = () => {
       setError('');
 
       if (showRefreshToast) {
-        toast.success('Payment history refreshed successfully!');
+        toast.success('Savings refreshed successfully!');
       }
     } catch (error) {
-      console.error('Error fetching payment history:', error);
-      setError('Failed to load payment history');
-      toast.error('Failed to load payment history');
+      console.error('Error fetching Savings:', error);
+      setError('Failed to load Savings');
+      toast.error('Failed to load Savings');
     } finally {
       setLoading(false);
     }
@@ -109,13 +109,13 @@ const PaymentHistoryPage = () => {
     }
   };
 
-  // Refresh payment history
+  // Refresh Savings
   const refreshPaymentHistory = () => {
     fetchPaymentHistory(currentPage, true);
     fetchPaymentKPIs(); // Also refresh KPIs
   };
 
-  // Export payment history as CSV
+  // Export Savings as CSV
   const exportPaymentHistory = async () => {
     try {
       setExportLoading(true);
@@ -139,10 +139,10 @@ const PaymentHistoryPage = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success('Payment history exported successfully!');
+      toast.success('Savings exported successfully!');
     } catch (error) {
-      console.error('Error exporting payment history:', error);
-      toast.error('Failed to export payment history');
+      console.error('Error exporting Savings:', error);
+      toast.error('Failed to export Savings');
     } finally {
       setExportLoading(false);
     }
@@ -257,7 +257,7 @@ const PaymentHistoryPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold">Payment History</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold">Savings</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               View all your payment transactions and their status
             </p>
@@ -273,7 +273,7 @@ const PaymentHistoryPage = () => {
                 disabled={loading}
                 variant="outline"
                 size="sm"
-                title="Refresh payment history (Ctrl+R)"
+                title="Refresh Savings (Ctrl+R)"
               >
                 {loading ? (
                   <>
@@ -339,9 +339,10 @@ const PaymentHistoryPage = () => {
               <CardContent className="pt-4 sm:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm font-medium text-green-700">Completed</p>
-                    <h3 className="text-xl sm:text-2xl font-bold text-green-800">{kpis.completedCount}</h3>
-                    <p className="text-xs text-green-600">KES {kpis.completedAmount.toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm font-medium text-green-700">Amount Saved </p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-green-800">KES {kpis.completedAmount}</h3>
+                    <p className="text-xs text-green-600">Total Payments: {kpis.completedCount}</p>
+
                   </div>
                   <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
                     <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -481,7 +482,7 @@ const PaymentHistoryPage = () => {
           </CardContent>
         </Card>
 
-        {/* Payment History Table */}
+        {/* Savings Table */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -511,7 +512,7 @@ const PaymentHistoryPage = () => {
             ) : filteredHistory.length === 0 ? (
               <div className="text-center py-8">
                 <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No payment history found</p>
+                <p className="text-muted-foreground">No Savings found</p>
               </div>
             ) : (
               <div className="space-y-4">

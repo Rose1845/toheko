@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
-import { disbursementService } from "@/services/disbursementService";
+import { disbursementService, DisbursementKPI } from "@/services/disbursementService";
 import { loanService } from "@/services/loanService";
 import { memberService } from "@/services/memberService";
 import { Disbursement, DisbursementRequest, DisbursementCompleteRequest, DisbursementFailCancelRequest, LoanApplication } from "@/types/api";
@@ -14,6 +14,12 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +39,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, DollarSign, AlertTriangle, CheckCircle, XCircle, CreditCard, Clock, Search, Trash2, Edit } from "lucide-react";
+import { Loader2, DollarSign, AlertTriangle, CheckCircle, XCircle, CreditCard, Clock, Search, Trash2, Edit, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 
 // Form schemas
@@ -67,9 +72,6 @@ type CompleteFormValues = z.infer<typeof completeFormSchema>;
 type RemarksFormValues = z.infer<typeof remarksFormSchema>;
 
 const Disbursements = () => {
-  // State for tab management
-  const [activeTab, setActiveTab] = useState("all");
-  
   // State for disbursements data
   const [showDetails, setShowDetails] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -134,6 +136,11 @@ const disbursements = disbursementsData?.content || [];
     queryFn: loanService.getAllLoanApplications,
   });
 
+  // Fetch KPIs
+  const { data: kpis, isLoading: isKPIsLoading } = useQuery({
+    queryKey: ["disbursement-kpis"],
+    queryFn: disbursementService.getKPIs,
+  });
 
   // Helper to get loan application by ID
   const getLoanApplication = (id: number): LoanApplication | undefined => {
@@ -446,128 +453,186 @@ const disbursements = disbursementsData?.content || [];
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Disbursements Management</h1>
-          <Button onClick={handleAddDisbursement} className="flex items-center gap-2">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Disbursements Management</h1>
+          <Button onClick={handleAddDisbursement} className="flex items-center gap-2 w-full sm:w-auto">
             <DollarSign className="h-4 w-4" />
             New Disbursement
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 w-full max-w-md">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="processing">Processing</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-          </TabsList>
+        {/* KPI Section */}
+        <Accordion type="single" collapsible defaultValue="kpis" className="w-full">
+          <AccordionItem value="kpis">
+            <AccordionTrigger className="text-lg font-semibold">
+              Disbursement KPIs
+            </AccordionTrigger>
+            <AccordionContent>
+              {isKPIsLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading KPIs...</span>
+                </div>
+              ) : kpis ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Total Disbursements */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Total Disbursements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{kpis.totalCount}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        KES {kpis.totalAmount.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
 
-          <TabsContent value="all" className="pt-4">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>All Disbursements</CardTitle>
-                <CardDescription>View and manage all disbursements</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isDisbursementsLoading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading disbursements...</span>
-                  </div>
-                ) : disbursements.length === 0 ? (
-                  <div className="text-center py-10">
-                    <DollarSign className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">
-                      No disbursements found
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Get started by creating a new disbursement.
-                    </p>
-                  </div>
-                ) : (
-                  <DataTable
-                    data={disbursements}
-                    columns={columns}
-                    keyField="id"
-                    pagination={true}
-                    searchable={true}
-                    pageSize={10}
-                    pageSizeOptions={[5, 10, 25, 50]}
-                    emptyMessage="No disbursements found"
-                    loading={isDisbursementsLoading}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  {/* Average Amount */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Average Amount
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">KES {kpis.avgAmount.toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Range: {kpis.minAmount.toLocaleString()} - {kpis.maxAmount.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
 
-          <TabsContent value="pending" className="pt-4">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Pending Disbursements</CardTitle>
-                <CardDescription>Disbursements waiting to be processed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  data={disbursements.filter(d => d.status === 'PENDING')}
-                  columns={columns}
-                  keyField="id"
-                  pagination={true}
-                  searchable={true}
-                  pageSize={10}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  emptyMessage="No pending disbursements found"
-                  loading={isDisbursementsLoading}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  {/* Success Rate */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Success Rate
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{kpis.successRate.toFixed(1)}%</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {kpis.executedCount} executed / {kpis.failedCount} failed
+                      </p>
+                    </CardContent>
+                  </Card>
 
-          <TabsContent value="processing" className="pt-4">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Processing Disbursements</CardTitle>
-                <CardDescription>Disbursements currently being processed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  data={disbursements.filter(d => d.status === 'PROCESSING')}
-                  columns={columns}
-                  keyField="id"
-                  pagination={true}
-                  searchable={true}
-                  pageSize={10}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  emptyMessage="No processing disbursements found"
-                  loading={isDisbursementsLoading}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  {/* Unique Members */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Unique Members
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{kpis.uniqueMembers}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Active recipients
+                      </p>
+                    </CardContent>
+                  </Card>
 
-          <TabsContent value="completed" className="pt-4">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Completed Disbursements</CardTitle>
-                <CardDescription>Disbursements that have been completed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  data={disbursements.filter(d => d.status === 'COMPLETED')}
-                  columns={columns}
-                  keyField="id"
-                  pagination={true}
-                  searchable={true}
-                  pageSize={10}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  emptyMessage="No completed disbursements found"
-                  loading={isDisbursementsLoading}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  {/* By Status */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        By Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {kpis.byStatus.map((status) => (
+                          <div key={status.status} className="flex justify-between items-center text-sm">
+                            <span className="flex items-center gap-1">
+                              <Badge variant={
+                                status.status === 'COMPLETED' ? 'default' :
+                                status.status === 'PENDING' ? 'secondary' :
+                                status.status === 'PROCESSING' ? 'outline' : 'destructive'
+                              } className="text-xs">
+                                {status.status}
+                              </Badge>
+                            </span>
+                            <span className="font-medium">{status.count} (KES {status.amount.toLocaleString()})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* By Channel */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        By Channel
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {kpis.byChannel.map((channel) => (
+                          <div key={channel.channel} className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">{channel.channel}</span>
+                            <span className="font-medium">{channel.count} (KES {channel.amount.toLocaleString()})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No KPI data available
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {/* All Disbursements Table */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>All Disbursements</CardTitle>
+            <CardDescription>View and manage all disbursements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isDisbursementsLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading disbursements...</span>
+              </div>
+            ) : disbursements.length === 0 ? (
+              <div className="text-center py-10">
+                <DollarSign className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">
+                  No disbursements found
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Get started by creating a new disbursement.
+                </p>
+              </div>
+            ) : (
+              <DataTable
+                data={disbursements}
+                columns={columns}
+                keyField="id"
+                pagination={true}
+                searchable={true}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 25, 50]}
+                emptyMessage="No disbursements found"
+                loading={isDisbursementsLoading}
+              />
+            )}
+          </CardContent>
+        </Card>
 
         {/* View Disbursement Details Dialog */}
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
