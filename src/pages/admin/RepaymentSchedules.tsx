@@ -378,22 +378,22 @@ const RepaymentSchedules: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Repayment Schedules</h1>
-          <div className="flex space-x-2">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Repayment Schedules</h1>
+          <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => refetch()}
-              className="flex items-center"
+              className="flex items-center w-full sm:w-auto"
             >
               <RefreshCcw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            
+
             <Button
               onClick={handleGenerateSchedules}
-              className="flex items-center"
+              className="flex items-center w-full sm:w-auto"
             >
               <FilePlus className="h-4 w-4 mr-2" />
               Generate Schedules

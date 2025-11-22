@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserDashboardLayout from './layout/UserDashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,8 @@ const dummyLoans = [
 ];
 
 const Loans = () => {
+  const navigate = useNavigate();
+
   return (
     <UserDashboardLayout>
       <div className="space-y-4 sm:space-y-6">
@@ -41,7 +44,10 @@ const Loans = () => {
             <h1 className="text-lg sm:text-xl font-semibold">My Loans</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">View and manage your active loans</p>
           </div>
-          <Button className="flex items-center gap-2 text-sm">
+          <Button 
+            className="flex items-center gap-2 text-sm"
+            onClick={() => navigate('/user/loan-application')}
+          >
             <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Apply for Loan</span>
             <span className="sm:hidden">Apply</span>

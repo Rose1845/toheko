@@ -59,7 +59,7 @@ export const loanService = {
   },
 
   createLoanApplication: async (data): Promise<LoanApplicationRequest>=>{
-    const response = await apiClient.post(`/api/v1/loan-applications`, data);
+    const response = await apiClient.post(`/api/v1/loan-applications/create`, data);
     return response.data;
   },
   createLoanGuarantor: async (data): Promise<LoanGuarantor>=>{

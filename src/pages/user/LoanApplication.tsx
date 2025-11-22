@@ -56,6 +56,10 @@ const LoanApplication = () => {
     loanPurpose: '',
     groupId: 0
   });
+  
+  // Validation error states
+  const [amountError, setAmountError] = useState('');
+  const [termError, setTermError] = useState('');
 
   // Guarantors, Collaterals, Next of Kin
   const [guarantors, setGuarantors] = useState<GuarantorRequest[]>([]);
@@ -144,6 +148,78 @@ const LoanApplication = () => {
     }
   };
 
+  // Validation function for loan amount
+  const validateAmount = (value: string): boolean => {
+    setAmountError('');
+    
+    if (!value || value.trim() === '') {
+      setAmountError('Loan amount is required');
+      return false;
+    }
+    
+    const numValue = Number(value);
+    
+    if (isNaN(numValue)) {
+      setAmountError('Please enter a valid number');
+      return false;
+    }
+    
+    if (numValue <= 0) {
+      setAmountError('Amount must be greater than 0');
+      return false;
+    }
+    
+    if (selectedLoanProduct) {
+      if (numValue < selectedLoanProduct.minAmount) {
+        setAmountError(`Amount cannot be less than KES ${selectedLoanProduct.minAmount.toLocaleString()}`);
+        return false;
+      }
+      
+      if (numValue > selectedLoanProduct.maxAmount) {
+        setAmountError(`Amount cannot exceed KES ${selectedLoanProduct.maxAmount.toLocaleString()}`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  // Validation function for term days
+  const validateTermDays = (value: string): boolean => {
+    setTermError('');
+    
+    if (!value || value.trim() === '') {
+      setTermError('Loan term is required');
+      return false;
+    }
+    
+    const numValue = Number(value);
+    
+    if (isNaN(numValue)) {
+      setTermError('Please enter a valid number');
+      return false;
+    }
+    
+    if (numValue <= 0 || !Number.isInteger(numValue)) {
+      setTermError('Term must be a positive whole number');
+      return false;
+    }
+    
+    if (selectedLoanProduct) {
+      if (numValue < selectedLoanProduct.minTermDays) {
+        setTermError(`Term cannot be less than ${selectedLoanProduct.minTermDays} days`);
+        return false;
+      }
+      
+      if (numValue > selectedLoanProduct.maxTermDays) {
+        setTermError(`Term cannot exceed ${selectedLoanProduct.maxTermDays} days`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const nextStep = () => {
     // Validation logic for each step
     if (currentStep === 1 && !selectedLoanProduct) {
@@ -152,13 +228,15 @@ const LoanApplication = () => {
     }
     
     if (currentStep === 2) {
-      if (!applicationForm.amount || Number(applicationForm.amount) < selectedLoanProduct!.minAmount || Number(applicationForm.amount) > selectedLoanProduct!.maxAmount) {
-        toast.error(`Amount must be between KES ${selectedLoanProduct!.minAmount} and KES ${selectedLoanProduct!.maxAmount}`);
+      // Validate amount
+      if (!validateAmount(applicationForm.amount)) {
+        toast.error(amountError || 'Please enter a valid loan amount');
         return;
       }
 
-      if (!applicationForm.termDays || Number(applicationForm.termDays) < selectedLoanProduct!.minTermDays || Number(applicationForm.termDays) > selectedLoanProduct!.maxTermDays) {
-        toast.error(`Term must be between ${selectedLoanProduct!.minTermDays} and ${selectedLoanProduct!.maxTermDays} days`);
+      // Validate term days
+      if (!validateTermDays(applicationForm.termDays)) {
+        toast.error(termError || 'Please enter a valid loan term');
         return;
       }
 
@@ -691,10 +769,36 @@ const LoanApplication = () => {
                       <Input
                         id="amount"
                         type="number"
-                        placeholder={`KES ${selectedLoanProduct?.minAmount} - KES ${selectedLoanProduct?.maxAmount}`}
+                        placeholder={`KES ${selectedLoanProduct?.minAmount.toLocaleString()} - KES ${selectedLoanProduct?.maxAmount.toLocaleString()}`}
                         value={applicationForm.amount}
-                        onChange={(e) => setApplicationForm({...applicationForm, amount: e.target.value})}
+                        min={selectedLoanProduct?.minAmount}
+                        max={selectedLoanProduct?.maxAmount}
+                        onChange={(e) => {
+                          setApplicationForm({...applicationForm, amount: e.target.value});
+                          if (e.target.value) {
+                            validateAmount(e.target.value);
+                          } else {
+                            setAmountError('');
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value) {
+                            validateAmount(e.target.value);
+                          }
+                        }}
+                        className={amountError ? 'border-red-500' : ''}
                       />
+                      {amountError && (
+                        <p className="text-xs text-red-500 mt-1">{amountError}</p>
+                      )}
+                      {applicationForm.amount && !amountError && Number(applicationForm.amount) > 0 && (
+                        <p className="text-xs text-green-600 mt-1">✓ Valid amount: KES {Number(applicationForm.amount).toLocaleString()}</p>
+                      )}
+                      {selectedLoanProduct && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Range: KES {selectedLoanProduct.minAmount.toLocaleString()} - KES {selectedLoanProduct.maxAmount.toLocaleString()}
+                        </p>
+                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="termDays">Term (Days)</Label>
@@ -703,8 +807,35 @@ const LoanApplication = () => {
                         type="number"
                         placeholder={`${selectedLoanProduct?.minTermDays} - ${selectedLoanProduct?.maxTermDays}`}
                         value={applicationForm.termDays}
-                        onChange={(e) => setApplicationForm({...applicationForm, termDays: e.target.value})}
+                        min={selectedLoanProduct?.minTermDays}
+                        max={selectedLoanProduct?.maxTermDays}
+                        step="1"
+                        onChange={(e) => {
+                          setApplicationForm({...applicationForm, termDays: e.target.value});
+                          if (e.target.value) {
+                            validateTermDays(e.target.value);
+                          } else {
+                            setTermError('');
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value) {
+                            validateTermDays(e.target.value);
+                          }
+                        }}
+                        className={termError ? 'border-red-500' : ''}
                       />
+                      {termError && (
+                        <p className="text-xs text-red-500 mt-1">{termError}</p>
+                      )}
+                      {applicationForm.termDays && !termError && Number(applicationForm.termDays) > 0 && (
+                        <p className="text-xs text-green-600 mt-1">✓ Valid term: {applicationForm.termDays} days</p>
+                      )}
+                      {selectedLoanProduct && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Range: {selectedLoanProduct.minTermDays} - {selectedLoanProduct.maxTermDays} days
+                        </p>
+                      )}
                     </div>
                   </div>
 

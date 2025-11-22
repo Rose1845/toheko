@@ -1,34 +1,18 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "./DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
-import { savingService } from "@/services/savingService";
-import { memberService } from "@/services/memberService";
-import { Saving, SavingRequest } from "@/types/api";
+import { paymentService } from "@/services/paymentService";
+import { Payment } from "@/types/api";
 import { DataTable, Column } from "@/components/ui/data-table";
 
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Card,
   CardContent,
@@ -37,219 +21,98 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Edit, Trash2, Plus, Loader2, PiggyBank } from "lucide-react";
-
-// Form schema for savings
-const savingFormSchema = z.object({
-  id: z.number().optional(),
-  memberId: z.number(),
-  savingAmount: z.coerce.number().positive("Amount must be positive"),
-  savingDate: z.string(),
-  savingMethod: z.string(),
-  status: z.string().default("ACTIVE"),
-});
-
-type SavingFormValues = z.infer<typeof savingFormSchema>;
+import { Badge } from "@/components/ui/badge";
+import { Loader2, PiggyBank, Eye } from "lucide-react";
 
 const Savings = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedSaving, setSelectedSaving] = useState<Saving | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
-  // Queries
-  const { data: savings, isLoading: savingsLoading } = useQuery({
-    queryKey: ["savings"],
-    queryFn: savingService.getAllSavings,
+  // Query payments
+  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
+    queryKey: ["savings-payments"],
+    queryFn: () => paymentService.getAllPayments(0, 100),
   });
 
-  const { data: members } = useQuery({
-    queryKey: ["members"],
-    queryFn: memberService.getAllMembers,
-  });
+  const payments = paymentsData?.content || [];
 
-  // Mutations
-  const createMutation = useMutation({
-    mutationFn: savingService.createSaving,
-    onSuccess: () => {
-      toast({ title: "Success", description: "Saving created successfully" });
-      setIsAddDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["savings"] });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to create saving",
-      });
-      console.error(error);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: savingService.updateSaving,
-    onSuccess: () => {
-      toast({ title: "Success", description: "Saving updated successfully" });
-      setIsEditDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["savings"] });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update saving",
-      });
-      console.error(error);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => savingService.deleteSaving(id),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Saving deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ["savings"] });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to delete saving",
-      });
-      console.error(error);
-    },
-  });
-
-  // Forms
-  const editForm = useForm<SavingFormValues>({
-    resolver: zodResolver(savingFormSchema),
-    defaultValues: {
-      id: 0,
-      memberId: 0,
-      savingAmount: 0,
-      savingDate: new Date().toISOString().split("T")[0],
-      savingMethod: "",
-      status: "ACTIVE",
-    },
-  });
-
-  const addForm = useForm<SavingFormValues>({
-    resolver: zodResolver(savingFormSchema),
-    defaultValues: {
-      memberId: 0,
-      savingAmount: 0,
-      savingDate: new Date().toISOString().split("T")[0],
-      savingMethod: "",
-      status: "ACTIVE",
-    },
-  });
-
-  // Handle opening the edit dialog
-  const handleEdit = (saving: Saving) => {
-    setSelectedSaving(saving);
-    editForm.reset({
-      id: saving.id,
-      memberId: saving.memberId,
-      savingAmount: saving.savingAmount,
-      savingDate: saving.savingDate.split("T")[0],
-      savingMethod: saving.savingMethod,
-      status: saving.status,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle form submissions
-  const onSubmitAdd = (values: SavingFormValues) => {
-    const savingRequest: SavingRequest = {
-      id: 0, // This will be ignored on create
-      memberId: values.memberId,
-      savingAmount: values.savingAmount,
-      savingDate: values.savingDate,
-      savingMethod: values.savingMethod,
-      status: values.status,
-    };
-    createMutation.mutate(savingRequest);
-  };
-
-  const onSubmitEdit = (values: SavingFormValues) => {
-    if (!selectedSaving) return;
-
-    const savingRequest: SavingRequest = {
-      id: selectedSaving.id,
-      memberId: values.memberId,
-      savingAmount: values.savingAmount,
-      savingDate: values.savingDate,
-      savingMethod: values.savingMethod,
-      status: values.status,
-    };
-    updateMutation.mutate(savingRequest);
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this saving?")) {
-      deleteMutation.mutate(id);
-    }
+  // Handle viewing payment details
+  const handleView = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsViewDialogOpen(true);
   };
 
   // Define columns for DataTable
-  const columns: Column<Saving>[] = [
+  const columns: Column<Payment>[] = [
     {
       header: "ID",
-      accessorKey: "id",
+      accessorKey: "paymentId",
       sortable: true,
     },
     {
       header: "Member",
-      accessorKey: "memberId",
+      accessorKey: "account",
       sortable: true,
-      cell: (saving) => {
-        const member = members?.find((m) => m.memberId === saving.memberId);
+      cell: (payment) => {
+        const member = payment.account?.member;
         return (
           <span className="font-medium">
             {member
               ? `${member.firstName} ${member.lastName}`
-              : `Member #${saving.memberId}`}
+              : "N/A"}
           </span>
         );
       },
     },
     {
-      header: "Amount",
-      accessorKey: "savingAmount",
+      header: "Account",
+      accessorKey: "account",
       sortable: true,
-      cell: (saving) => (
+      cell: (payment) => (
+        <span className="text-sm text-muted-foreground">
+          {payment.account?.accountNumber || "N/A"}
+        </span>
+      ),
+    },
+    {
+      header: "Amount",
+      accessorKey: "amount",
+      sortable: true,
+      cell: (payment) => (
         <span className="font-medium">
           {new Intl.NumberFormat("en-KE", {
             style: "currency",
             currency: "KES",
-          }).format(saving?.savingAmount)}
+          }).format(payment.amount)}
         </span>
       ),
     },
     {
       header: "Date",
-      accessorKey: "savingDate",
+      accessorKey: "paymentDate",
       sortable: true,
-      cell: (saving) => (
-        <span>{new Date(saving?.savingDate).toLocaleDateString()}</span>
+      cell: (payment) => (
+        <span>{new Date(payment.paymentDate).toLocaleDateString()}</span>
+      ),
+    },
+    {
+      header: "Payment Type",
+      accessorKey: "paymentType",
+      sortable: true,
+      cell: (payment) => (
+        <span className="capitalize">
+          {payment.paymentType?.name || "N/A"}
+        </span>
       ),
     },
     {
       header: "Method",
-      accessorKey: "savingMethod",
+      accessorKey: "modeOfPayment",
       sortable: true,
-      cell: (saving) => (
+      cell: (payment) => (
         <span className="capitalize">
-          {" "}
-          {saving?.savingMethod ? saving.savingMethod.toLowerCase() : "N/A"}
+          {payment.modeOfPayment?.name || "N/A"}
         </span>
       ),
     },
@@ -257,46 +120,36 @@ const Savings = () => {
       header: "Status",
       accessorKey: "status",
       sortable: true,
-      cell: (saving) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            saving.status === "ACTIVE"
-              ? "bg-green-100 text-green-800"
-              : saving.status === "COMPLETED"
-              ? "bg-blue-100 text-blue-800"
-              : "bg-red-100 text-red-800"
-          }`}
+      cell: (payment) => (
+        <Badge
+          variant="outline"
+          className={
+            payment.status === "COMPLETED"
+              ? "bg-green-100 text-green-800 border-green-200"
+              : payment.status === "PENDING"
+              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+              : "bg-red-100 text-red-800 border-red-200"
+          }
         >
-          {saving?.status}
-        </span>
+          {payment.status}
+        </Badge>
       ),
     },
     {
       header: "Actions",
-      accessorKey: "id",
-      cell: (saving) => (
+      accessorKey: "paymentId",
+      cell: (payment) => (
         <div className="flex space-x-2 justify-end">
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              handleEdit(saving);
+              handleView(payment);
             }}
           >
-            <Edit className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(saving.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
+            <Eye className="h-4 w-4 mr-1" />
+            View
           </Button>
         </div>
       ),
@@ -305,321 +158,141 @@ const Savings = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Savings Management</CardTitle>
-            <CardDescription>
-              Manage member savings and contributions
-            </CardDescription>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Saving
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Saving</DialogTitle>
-                  <DialogDescription>
-                    Create a new saving record for a member.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...addForm}>
-                  <form
-                    onSubmit={addForm.handleSubmit(onSubmitAdd)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={addForm.control}
-                      name="memberId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Member</FormLabel>
-                          <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            defaultValue={field.value.toString()}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a member" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {members?.map((member) => (
-                                <SelectItem
-                                  key={member.memberId}
-                                  value={member.memberId.toString()}
-                                >
-                                  {member.firstName} {member.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="savingAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="savingDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Saving Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="savingMethod"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Saving Type</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="REGULAR">Regular</SelectItem>
-                              <SelectItem value="SPECIAL">Special</SelectItem>
-                              <SelectItem value="FIXED">Fixed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addForm.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="ACTIVE">Active</SelectItem>
-                              <SelectItem value="COMPLETED">
-                                Completed
-                              </SelectItem>
-                              <SelectItem value="CANCELLED">
-                                Cancelled
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter>
-                      <Button type="submit" disabled={createMutation.isPending}>
-                        {createMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <CardTitle className="text-lg sm:text-xl">Savings Management</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                View member savings and payment transactions
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
-            {savingsLoading ? (
+            {paymentsLoading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="ml-2">Loading savings...</span>
               </div>
-            ) : savings?.length === 0 ? (
+            ) : payments.length === 0 ? (
               <div className="text-center py-10">
                 <PiggyBank className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">No savings found</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Get started by creating a new saving record.
+                  No payment records available.
                 </p>
-                <Button
-                  onClick={() => setIsAddDialogOpen(true)}
-                  className="mt-4"
-                  variant="outline"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Saving
-                </Button>
               </div>
             ) : (
               <DataTable
-                data={savings}
+                data={payments}
                 columns={columns}
-                keyField="id"
+                keyField="paymentId"
                 pagination={true}
                 searchable={true}
                 pageSize={10}
                 pageSizeOptions={[5, 10, 25, 50]}
                 emptyMessage="No savings found"
-                loading={savingsLoading}
-                onRowClick={(saving) => handleEdit(saving)}
+                loading={paymentsLoading}
+                onRowClick={(payment) => handleView(payment)}
               />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* View Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Saving</DialogTitle>
+            <DialogTitle>Payment Details</DialogTitle>
             <DialogDescription>
-              Update saving information for this record.
+              View payment transaction information
             </DialogDescription>
           </DialogHeader>
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(onSubmitEdit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={editForm.control}
-                name="memberId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Member</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {members?.map((member) => (
-                          <SelectItem
-                            key={member.memberId}
-                            value={member.memberId.toString()}
-                          >
-                            {member.firstName} {member.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+          {selectedPayment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment ID</p>
+                  <p className="font-medium">{selectedPayment.paymentId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge
+                    variant="outline"
+                    className={
+                      selectedPayment.status === "COMPLETED"
+                        ? "bg-green-100 text-green-800"
+                        : selectedPayment.status === "PENDING"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }
+                  >
+                    {selectedPayment.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Amount</p>
+                  <p className="font-medium">
+                    {new Intl.NumberFormat("en-KE", {
+                      style: "currency",
+                      currency: "KES",
+                    }).format(selectedPayment.amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {new Date(selectedPayment.paymentDate).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Member</p>
+                  <p className="font-medium">
+                    {selectedPayment.account?.member
+                      ? `${selectedPayment.account.member.firstName} ${selectedPayment.account.member.lastName}`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Account</p>
+                  <p className="font-medium">
+                    {selectedPayment.account?.accountNumber || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Type</p>
+                  <p className="font-medium">
+                    {selectedPayment.paymentType?.name || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Method</p>
+                  <p className="font-medium">
+                    {selectedPayment.modeOfPayment?.name || "N/A"}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Transaction Reference</p>
+                  <p className="font-medium text-xs font-mono break-all">
+                    {selectedPayment.transactionReference || "N/A"}
+                  </p>
+                </div>
+                {selectedPayment.mpesaReceiptNo && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">M-PESA Receipt</p>
+                    <p className="font-medium">{selectedPayment.mpesaReceiptNo}</p>
+                  </div>
                 )}
-              />
-              <FormField
-                control={editForm.control}
-                name="savingAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                {selectedPayment.remarks && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Remarks</p>
+                    <p className="font-medium">{selectedPayment.remarks}</p>
+                  </div>
                 )}
-              />
-              <FormField
-                control={editForm.control}
-                name="savingDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Saving Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="savingMethod"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Saving Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="REGULAR">Regular</SelectItem>
-                        <SelectItem value="SPECIAL">Special</SelectItem>
-                        <SelectItem value="FIXED">Fixed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? "Updating..." : "Update"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

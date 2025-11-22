@@ -1,6 +1,13 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { authService } from "@/services/authService";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   Users,
@@ -19,6 +26,16 @@ import {
   Wallet,
   CreditCard as CreditCardIcon,
   UsersRound,
+  BadgeDollarSign,
+  FileText,
+  Calendar,
+  Banknote,
+  Building2,
+  FolderOpen,
+  Tag,
+  CircleDollarSign,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 
 const SidebarLink = ({
@@ -33,19 +50,36 @@ const SidebarLink = ({
   label: string;
   active: boolean;
   collapsed: boolean;
-}) => (
-  <Link
-    to={to}
-    className={`flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${
-      active
-        ? "bg-primary/10 text-primary"
-        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-    }`}
-  >
-    {icon}
-    {!collapsed && <span>{label}</span>}
-  </Link>
-);
+}) => {
+  const content = (
+    <Link
+      to={to}
+      className={`flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      } ${collapsed ? "justify-center" : ""}`}
+    >
+      <span className={collapsed ? "text-xl" : ""}>{icon}</span>
+      {!collapsed && <span>{label}</span>}
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipContent side="right">
+            <p>{label}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return content;
+};
 
 const SidebarSubmenu = ({
   icon,
@@ -79,25 +113,40 @@ const SidebarSubmenu = ({
 
   const toggle = () => setIsOpen((prev) => !prev);
 
+  const button = (
+    <button
+      onClick={toggle}
+      className={`w-full flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors
+                 text-muted-foreground hover:bg-muted hover:text-foreground ${collapsed ? "justify-center" : ""}`}
+    >
+      <div className="flex items-center gap-3">
+        <span className={collapsed ? "text-xl" : ""}>{icon}</span>
+        {!collapsed && <span>{label}</span>}
+      </div>
+      {!collapsed && (
+        <ChevronDown
+          className={`h-4 w-4 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      )}
+    </button>
+  );
+
   return (
     <div className="space-y-1">
-      <button
-        onClick={toggle}
-        className={`w-full flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors
-                   text-muted-foreground hover:bg-muted hover:text-foreground`}
-      >
-        <div className="flex items-center gap-3">
-          {icon}
-          {!collapsed && <span>{label}</span>}
-        </div>
-        {!collapsed && (
-          <ChevronDown
-            className={`h-4 w-4 transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        )}
-      </button>
+      {collapsed ? (
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>{button}</TooltipTrigger>
+            <TooltipContent side="right">
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        button
+      )}
 
       {(isOpen || collapsed) && (
         <div className={`pl-${collapsed ? "0" : "8"} space-y-1 mt-1`}>
@@ -110,10 +159,16 @@ const SidebarSubmenu = ({
 
 export default function DashboardSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isActive = (path) => location.pathname === path;
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login", { replace: true });
+  };
 
   // Handle responsive behavior
   useEffect(() => {
@@ -261,7 +316,7 @@ export default function DashboardSidebar() {
             )}
           </div>
           <SidebarSubmenu
-            icon={<CreditCard className="h-5 w-5" />}
+            icon={<BadgeDollarSign className="h-5 w-5" />}
             label="Loans"
             collapsed={collapsed}
             paths={[
@@ -276,49 +331,49 @@ export default function DashboardSidebar() {
           >
             <SidebarLink
               to="/admin/loans"
-              icon={<CreditCard className="h-5 w-5" />}
+              icon={<FileText className="h-5 w-5" />}
               label="All Loans"
               active={isActive("/admin/loans")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-products"
-              icon={<CreditCard className="h-5 w-5" />}
+              icon={<Tag className="h-5 w-5" />}
               label="Loan Products"
               active={isActive("/admin/loan-products")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-penalties"
-              icon={<CreditCard className="h-5 w-5" />}
+              icon={<AlertCircle className="h-5 w-5" />}
               label="Penalty"
               active={isActive("/admin/loan-penalties")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-repayments"
-              icon={<Receipt className="h-5 w-5" />}
+              icon={<CircleDollarSign className="h-5 w-5" />}
               label="Repayments"
               active={isActive("/admin/loan-repayments")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-schedules"
-              icon={<BookOpen className="h-5 w-5" />}
+              icon={<Calendar className="h-5 w-5" />}
               label="Schedules"
               active={isActive("/admin/loan-schedules")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-disbursements"
-              icon={<Wallet className="h-5 w-5" />}
+              icon={<Banknote className="h-5 w-5" />}
               label="Disbursement"
               active={isActive("/admin/loan-disbursements")}
               collapsed={collapsed}
             />
             <SidebarLink
               to="/admin/loan-accounts"
-              icon={<CreditCard className="h-5 w-5" />}
+              icon={<Wallet className="h-5 w-5" />}
               label="Loan Accounts"
               active={isActive("/admin/loan-accounts")}
               collapsed={collapsed}
@@ -327,21 +382,21 @@ export default function DashboardSidebar() {
 
           <SidebarLink
             to="/admin/accounts"
-            icon={<PiggyBank className="h-5 w-5" />}
+            icon={<Building2 className="h-5 w-5" />}
             label="Accounts"
             active={isActive("/admin/accounts")}
             collapsed={collapsed}
           />
           <SidebarLink
             to="/admin/account-types"
-            icon={<BookOpen className="h-5 w-5" />}
+            icon={<FolderOpen className="h-5 w-5" />}
             label="Account Types"
             active={isActive("/admin/account-types")}
             collapsed={collapsed}
           />
           <SidebarLink
             to="/admin/savings"
-            icon={<PiggyBank className="h-5 w-5" />}
+            icon={<TrendingUp className="h-5 w-5" />}
             label="Savings"
             active={isActive("/admin/savings")}
             collapsed={collapsed}
@@ -366,7 +421,7 @@ export default function DashboardSidebar() {
             />
             <SidebarLink
               to="/admin/payment-types"
-              icon={<CreditCardIcon className="h-5 w-5" />}
+              icon={<Tag className="h-5 w-5" />}
               label="Payment Types"
               active={isActive("/admin/payment-types")}
               collapsed={collapsed}
@@ -411,13 +466,13 @@ export default function DashboardSidebar() {
         </nav>
 
         <div className="mt-auto border-t pt-2 space-y-1">
-          <Link
-            to="/logout"
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="h-5 w-5" />
             {!collapsed && <span>Logout</span>}
-          </Link>
+          </button>
         </div>
       </div>
 

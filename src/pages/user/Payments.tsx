@@ -49,6 +49,10 @@ const Payments = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [remarks, setRemarks] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
+  
+  // Validation error states
+  const [amountError, setAmountError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   // STK Push and Payment Status states
   const [stkResponse, setStkResponse] = useState<STKPushResponse | null>(null);
@@ -273,6 +277,58 @@ const Payments = () => {
     }
   };
 
+  // Validation function for amount
+  const validateAmount = (value: string): boolean => {
+    setAmountError('');
+    
+    if (!value || value.trim() === '') {
+      setAmountError('Amount is required');
+      return false;
+    }
+    
+    const numValue = Number(value);
+    
+    if (isNaN(numValue)) {
+      setAmountError('Please enter a valid number');
+      return false;
+    }
+    
+    if (numValue <= 0) {
+      setAmountError('Amount must be greater than 0');
+      return false;
+    }
+    
+    if (numValue > 10000000) {
+      setAmountError('Amount cannot exceed KES 10,000,000');
+      return false;
+    }
+    
+    if (!Number.isInteger(numValue * 100)) {
+      setAmountError('Amount can have at most 2 decimal places');
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Validation function for phone number
+  const validatePhoneNumber = (value: string): boolean => {
+    setPhoneError('');
+    
+    if (!value || value.trim() === '') {
+      setPhoneError('Phone number is required');
+      return false;
+    }
+    
+    const formattedPhone = formatPhoneNumber(value);
+    if (!formattedPhone.startsWith('254') || formattedPhone.length !== 12) {
+      setPhoneError('Please enter a valid Kenyan phone number');
+      return false;
+    }
+    
+    return true;
+  };
+
   const nextStep = () => {
     // Validation logic for each step
     if (currentStep === 1 && !selectedAccount) {
@@ -291,20 +347,15 @@ const Payments = () => {
     }
     
     if (currentStep === 4) {
-      if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-        toast.error('Please enter a valid amount');
+      // Validate amount
+      if (!validateAmount(amount)) {
+        toast.error(amountError || 'Please enter a valid amount');
         return;
       }
 
-      if (!phoneNumber) {
-        toast.error('Please enter a phone number');
-        return;
-      }
-
-      // Validate phone number format (should be 12 digits starting with 254)
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone.startsWith('254') || formattedPhone.length !== 12) {
-        toast.error('Please enter a valid Kenyan phone number');
+      // Validate phone number
+      if (!validatePhoneNumber(phoneNumber)) {
+        toast.error(phoneError || 'Please enter a valid phone number');
         return;
       }
 
@@ -613,9 +664,30 @@ const Payments = () => {
                       placeholder="Enter amount"
                       value={amount}
                       required
-                      
-                      onChange={(e) => setAmount(e.target.value)}
+                      step="0.01"
+                      min="0.01"
+                      max="10000000"
+                      onChange={(e) => {
+                        setAmount(e.target.value);
+                        if (e.target.value) {
+                          validateAmount(e.target.value);
+                        } else {
+                          setAmountError('');
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value) {
+                          validateAmount(e.target.value);
+                        }
+                      }}
+                      className={amountError ? 'border-red-500' : ''}
                     />
+                    {amountError && (
+                      <p className="text-xs text-red-500 mt-1">{amountError}</p>
+                    )}
+                    {amount && !amountError && Number(amount) > 0 && (
+                      <p className="text-xs text-green-600 mt-1">✓ Valid amount: KES {Number(amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    )}
                   </div>
                   
                   <div className="grid gap-2">
@@ -628,18 +700,33 @@ const Payments = () => {
                       onChange={(e) => {
                         const formatted = formatPhoneNumber(e.target.value);
                         setPhoneNumber(formatted);
+                        if (formatted) {
+                          validatePhoneNumber(formatted);
+                        } else {
+                          setPhoneError('');
+                        }
                       }}
-                      className={phoneNumber && !phoneNumber.startsWith('254') ? 'border-yellow-300' : ''}
+                      onBlur={(e) => {
+                        if (e.target.value) {
+                          validatePhoneNumber(e.target.value);
+                        }
+                      }}
+                      className={phoneError ? 'border-red-500' : phoneNumber && !phoneNumber.startsWith('254') ? 'border-yellow-300' : ''}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Enter the phone number registered with M-PESA
-                      {phoneNumber && phoneNumber.startsWith('254') && phoneNumber.length === 12 && (
-                        <span className="text-green-600 ml-1">✓ Formatted correctly</span>
-                      )}
-                      {phoneNumber && (!phoneNumber.startsWith('254') || phoneNumber.length !== 12) && (
-                        <span className="text-yellow-600 ml-1">⚠ Will be formatted to: {formatPhoneNumber(phoneNumber)}</span>
-                      )}
-                    </p>
+                    {phoneError && (
+                      <p className="text-xs text-red-500 mt-1">{phoneError}</p>
+                    )}
+                    {!phoneError && phoneNumber && (
+                      <p className="text-xs text-muted-foreground">
+                        Enter the phone number registered with M-PESA
+                        {phoneNumber.startsWith('254') && phoneNumber.length === 12 && (
+                          <span className="text-green-600 ml-1">✓ Formatted correctly</span>
+                        )}
+                        {(!phoneNumber.startsWith('254') || phoneNumber.length !== 12) && (
+                          <span className="text-yellow-600 ml-1">⚠ Will be formatted to: {formatPhoneNumber(phoneNumber)}</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   
                   <div className="grid gap-2">
@@ -761,7 +848,7 @@ const Payments = () => {
                       paymentStatus === 'checking' ? 'text-blue-600' :
                       'text-yellow-600'
                     }`}>
-                      {paymentStatus === 'completed' ? 'Processed - Check History' :
+                      {paymentStatus === 'completed' ? 'Processed - Savings' :
                        paymentStatus === 'failed' ? 'Failed' :
                        paymentStatus === 'checking' ? 'Verifying with M-PESA...' :
                        'Awaiting M-PESA Confirmation'}

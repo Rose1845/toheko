@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import DashboardLayout from "@/pages/admin/DashboardLayout";
-import LoanAccountStatsCards from "@/components/dashboard/LoanAccountStatsCards";
 import { loanService } from "@/services/loanService";
 import { memberService } from "@/services/memberService";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Wallet, TrendingUp, Clock, CheckCircle, XCircle, Loader2, Download } from "lucide-react";
 
 const LoanAccounts = () => {
   const [accounts, setAccounts] = useState([]);
@@ -126,6 +135,63 @@ const LoanAccounts = () => {
   const [filterMaxAmount, setFilterMaxAmount] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Export handler
+  const handleExport = async () => {
+    setExportLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('format', 'csv');
+      if (filterSearch) params.append('search', filterSearch);
+      if (filterDate) {
+        params.append('startDate', filterDate);
+        params.append('endDate', filterDate);
+      }
+      params.append('filename', `loan-accounts-${new Date().toISOString().split('T')[0]}.csv`);
+      
+      const response = await fetch(
+        `https://sacco-app-production.up.railway.app/api/v1/loan-accounts/export?${params.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'accept': '*/*',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `loan-accounts-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Success",
+          description: "Loan accounts exported successfully.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to export loan accounts.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while exporting.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   // Filter handler for Loan Accounts
   const handleFilterSubmit = async (e: React.FormEvent) => {
@@ -160,11 +226,17 @@ const LoanAccounts = () => {
   const columns: Column<any>[] = [
     { header: "Account No", accessorKey: "accountNo", sortable: true },
     { header: "Member", accessorKey: "memberId", sortable: true, cell: (acc) => getMemberName(acc.memberId) },
-    {header: "Phone Number", accessorKey: (acc) => acc.phoneNumber, cell: (acc) => (<span className="font-medium">{acc?.mobileNumber}</span>)},
+    {header: "Phone Number", accessorKey: "mobileNumber", cell: (acc) => (<span className="font-medium">{acc?.mobileNumber || '--'}</span>)},
     { header: "Principal", accessorKey: "principalAmount", sortable: true },
     { header: "Interest Rate", accessorKey: "interestRate", sortable: true, cell: (acc) => `${acc.interestRate}%` },
     { header: "Status", accessorKey: "status", sortable: true, cell: (acc) => (
-      <span className={`px-2 py-1 rounded border text-xs font-semibold ${getStatusClass(acc.status)}`}>{acc.status}</span>
+      <Badge variant={
+        acc.status === 'ACTIVE' ? 'default' :
+        acc.status === 'PENDING_DISBURSEMENT' ? 'secondary' :
+        acc.status === 'CLOSED' ? 'outline' : 'destructive'
+      }>
+        {acc.status.replace(/_/g, ' ')}
+      </Badge>
     ) },
     { header: "Phase", accessorKey: "phase", sortable: true },
     { header: "Disbursed At", accessorKey: "disbursedAt", sortable: true, cell: (acc) => acc.disbursedAt ? format(new Date(acc.disbursedAt), "dd/MM/yyyy") : "--" },
@@ -214,42 +286,134 @@ const LoanAccounts = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-4 flex justify-between items-center">
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-              Loan Accounts
-            </h1>
-            <p className="text-gray-500">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Loan Accounts</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               View and manage all loan accounts, including disbursed and pending accounts.
             </p>
           </div>
+          <Button onClick={handleExport} disabled={exportLoading} className="flex items-center gap-2 w-full sm:w-auto">
+            <Download className="h-4 w-4" />
+            {exportLoading ? "Exporting..." : "Export CSV"}
+          </Button>
         </div>
-        <LoanAccountStatsCards stats={accountStats} />
+
+        {/* KPI Section */}
+        <Accordion type="single" collapsible defaultValue="kpis" className="w-full">
+          <AccordionItem value="kpis">
+            <AccordionTrigger className="text-lg font-semibold">
+              Loan Account KPIs
+            </AccordionTrigger>
+            <AccordionContent>
+              {loading ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading KPIs...</span>
+                </div>
+              ) : accountStats ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Total Principal */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        Total Principal
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">KES {Number(accountStats.totalPrincipal || 0).toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total loan principal amount
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Total Outstanding */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Total Outstanding
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">KES {Number(accountStats.totalOutstanding || 0).toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total outstanding balance
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* By Status */}
+                  {accountStats.byStatus && accountStats.byStatus.length > 0 && (
+                    <>
+                      {accountStats.byStatus.map((status: any) => (
+                        <Card key={status.status}>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                              {status.status === 'PENDING_DISBURSEMENT' && <Clock className="h-4 w-4 inline mr-1" />}
+                              {status.status === 'ACTIVE' && <CheckCircle className="h-4 w-4 inline mr-1" />}
+                              {status.status === 'CLOSED' && <XCircle className="h-4 w-4 inline mr-1" />}
+                              {status.status.replace(/_/g, ' ')}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">{status.count}</div>
+                            <div className="space-y-1 mt-2">
+                              <p className="text-xs text-muted-foreground">
+                                Principal: KES {Number(status.principalSum || 0).toLocaleString()}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Outstanding: KES {Number(status.outstandingSum || 0).toLocaleString()}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No KPI data available
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {/* Loan Accounts Table */}
         <Card className="shadow-sm">
-             <CardHeader>
-                <CardTitle>Loan Accounts</CardTitle>
-              </CardHeader>
+          <CardHeader>
+            <CardTitle>All Loan Accounts</CardTitle>
+            <CardDescription>Filter and manage loan accounts</CardDescription>
+          </CardHeader>
           <CardContent>
             {/* Filter Form */}
-            <form className="flex gap-4 mb-6 items-end" onSubmit={handleFilterSubmit}>
-              <div>
-                <label className="block text-sm font-medium mb-1">Search</label>
-                <input type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="border rounded px-2 py-1 w-40" />
+            <form className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6" onSubmit={handleFilterSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <Input id="search" type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} placeholder="Search accounts..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Amount</label>
-                <input type="number" value={filterMinAmount} onChange={e => setFilterMinAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              <div className="space-y-2">
+                <Label htmlFor="minAmount">Min Amount</Label>
+                <Input id="minAmount" type="number" value={filterMinAmount} onChange={e => setFilterMinAmount(e.target.value)} placeholder="0" min="0" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Max Amount</label>
-                <input type="number" value={filterMaxAmount} onChange={e => setFilterMaxAmount(e.target.value)} className="border rounded px-2 py-1 w-32" min="0" />
+              <div className="space-y-2">
+                <Label htmlFor="maxAmount">Max Amount</Label>
+                <Input id="maxAmount" type="number" value={filterMaxAmount} onChange={e => setFilterMaxAmount(e.target.value)} placeholder="0" min="0" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
-                <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border rounded px-2 py-1 w-40" />
+              <div className="space-y-2">
+                <Label htmlFor="date">Date</Label>
+                <Input id="date" type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
               </div>
-              <Button type="submit" variant="secondary" disabled={searchLoading}>Filter</Button>
+              <div className="flex items-end">
+                <Button type="submit" variant="secondary" disabled={searchLoading} className="w-full">
+                  {searchLoading ? "Filtering..." : "Apply Filters"}
+                </Button>
+              </div>
             </form>
             <DataTable
               data={filteredAccounts}
@@ -294,22 +458,23 @@ const LoanAccounts = () => {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleDisburseSubmit} className="space-y-4">
-                <div>
-                  <label>Amount</label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="disburse-amount">Amount</Label>
+                  <Input
+                    id="disburse-amount"
                     type="number"
                     value={disburseAmount}
                     onChange={e => setDisburseAmount(Number(e.target.value))}
-                    className="w-full border rounded px-2 py-1"
                     required
                   />
                 </div>
-                <div>
-                  <label>Remarks</label>
-                  <textarea
+                <div className="space-y-2">
+                  <Label htmlFor="disburse-remarks">Remarks</Label>
+                  <Input
+                    id="disburse-remarks"
                     value={disburseRemarks}
                     onChange={e => setDisburseRemarks(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
+                    placeholder="Enter any remarks..."
                   />
                 </div>
                 <DialogFooter>

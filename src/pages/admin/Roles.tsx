@@ -255,10 +255,10 @@ const Roles = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Role Management</h1>
-          <Button onClick={openAddDialog}>Add Role</Button>
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold">Role Management</h1>
+          <Button onClick={openAddDialog} className="w-full sm:w-auto">Add Role</Button>
         </div>
 
         {isLoading ? (

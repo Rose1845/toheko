@@ -71,10 +71,10 @@ const Settings = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your SACCO system settings and preferences</p>
+      <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-4 md:py-8">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Settings</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Manage your SACCO system settings and preferences</p>
         </div>
 
         <Tabs
