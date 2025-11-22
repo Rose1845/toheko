@@ -188,7 +188,7 @@ const LoanApplicationSummary = () => {
         ) : statusSummary ? (
           <div className="space-y-4 sm:space-y-6">
             {/* Total Summary Card */}
-            <Card className="border shadow-sm">
+            {/* <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -208,7 +208,7 @@ const LoanApplicationSummary = () => {
                   </p>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Status Breakdown - Collapsible Accordion */}
             <Accordion type="single" collapsible defaultValue="status-breakdown">
