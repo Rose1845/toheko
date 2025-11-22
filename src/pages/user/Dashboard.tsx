@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import UserDashboardLayout from "./layout/UserDashboardLayout";
-import { CreditCard, PiggyBank, Calendar, Activity, Wallet, TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { CreditCard, PiggyBank, Calendar, Activity, Wallet, TrendingUp, Loader2, AlertCircle, UserCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { userPaymentService, PaymentKPIs, Account } from "@/services/user-services/userPaymentService";
@@ -27,7 +27,8 @@ const UserDashboard = () => {
     try {
       const decoded = jwtDecode<JwtPayload>(token);
       return decoded.userId;
-    } catch {
+    } catch (error) {
+      console.error('Failed to decode JWT:', error);
       return null;
     }
   };
@@ -69,19 +70,31 @@ const UserDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Calculate total savings from accounts
-  const totalSavings = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  // Calculate total savings from accounts - memoized for performance
+  const totalSavings = useMemo(() => 
+    accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0), 
+    [accounts]
+  );
 
-  // Calculate active loans (approved + disbursed)
-  const activeLoans = loanSummary ? (loanSummary.approved + loanSummary.disbursed) : 0;
+  // Calculate active loans (approved + disbursed) - memoized for performance
+  const activeLoans = useMemo(() => 
+    loanSummary ? (loanSummary.approved + loanSummary.disbursed) : 0,
+    [loanSummary]
+  );
 
-  // Calculate pending applications
-  const pendingApplications = loanSummary ? (loanSummary.pending + loanSummary.underReview) : 0;
+  // Calculate pending applications - memoized for performance
+  const pendingApplications = useMemo(() => 
+    loanSummary ? (loanSummary.pending + loanSummary.underReview) : 0,
+    [loanSummary]
+  );
 
-  // Format last payment date
-  const lastPaymentDate = paymentKPIs?.lastPaymentAt
-    ? format(new Date(paymentKPIs.lastPaymentAt), "MMM dd, yyyy")
-    : "No payments";
+  // Format last payment date - memoized for performance
+  const lastPaymentDate = useMemo(() => 
+    paymentKPIs?.lastPaymentAt
+      ? format(new Date(paymentKPIs.lastPaymentAt), "MMM dd, yyyy")
+      : "No payments",
+    [paymentKPIs?.lastPaymentAt]
+  );
 
   return (
     <UserDashboardLayout>
@@ -314,7 +327,7 @@ const UserDashboard = () => {
                       <Card className="cursor-pointer hover:bg-muted/50 transition-colors border border-muted h-full">
                         <CardContent className="p-3 sm:p-4 flex items-center space-x-2 sm:space-x-3">
                           <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                            <Calendar className="h-4 w-4 text-purple-600" />
+                            <UserCircle className="h-4 w-4 text-purple-600" />
                           </div>
                           <div className="text-xs sm:text-sm font-medium">Update Profile</div>
                         </CardContent>
