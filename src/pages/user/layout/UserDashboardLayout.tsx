@@ -62,7 +62,7 @@ const UserDashboardLayout: React.FC<UserDashboardLayoutProps> = ({ children }) =
       items: [
         { label: "Payments", icon: <Wallet size={18} />, path: "/user/payments" },
         { label: "Savings", icon: <PiggyBank size={18} />, path: "/user/payment-history" },
-        { label: "My Loans", icon: <CreditCard size={18} />, path: "/user/loans" },
+        // { label: "My Loans", icon: <CreditCard size={18} />, path: "/user/loans" },
         { label: "Loan Summary", icon: <TrendingUp size={18} />, path: "/user/loan-application-summary" },
         { label: "Apply for Loan", icon: <FileText size={18} />, path: "/user/loan-application" },
         { label: "Statements", icon: <History size={18} />, path: "/user/statements" },
