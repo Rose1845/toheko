@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -16,13 +15,12 @@ import { authService } from "@/services/authService";
 import { toast } from "@/components/ui/sonner";
 import { z } from "zod";
 import { jwtDecode } from "jwt-decode";
-import { AuthenticationResponse } from "@/types/api";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
-// Define a custom interface for our JWT payload
 interface TohekoJwtPayload {
   sub: string;
   role: string;
-  [key: string]: any; // Allow for other properties that might be in the token
+  [key: string]: any;
 }
 
 const loginSchema = z.object({
@@ -34,13 +32,13 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check for session expiration query parameter and show message
   useEffect(() => {
     const sessionExpired = searchParams.get("sessionExpired");
     if (sessionExpired === "true") {
@@ -52,7 +50,6 @@ const Login = () => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
 
-    // Clear the error for this field when user types
     if (errors[id]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -95,41 +92,31 @@ const Login = () => {
         password: formData.password,
       });
       
-      // Store the token in localStorage for authenticated requests
       if (response.access_token) {
         localStorage.setItem('token', response.access_token);
       }
       
       toast.success("Login successful!");
       
-      // Check user role from JWT token and redirect accordingly
       if (response.access_token) {
         try {
-          // Decode the JWT token to extract user information
           const decodedToken = jwtDecode<TohekoJwtPayload>(response.access_token);
           console.log('Decoded JWT Token:', decodedToken);
           localStorage.setItem("userId", decodedToken.userId);
           localStorage.setItem("role", decodedToken.role);
           
-          // Extract role from the token
           const userRole = decodedToken.role || '';
           console.log('User role from JWT:', userRole);
           
-          // Check if the role contains 'member'
           const isMember = userRole.toLowerCase().includes('member');
           
           if (isMember) {
-            // Redirect to user dashboard if the user is a member
             navigate("/user/dashboard");
-                        // navigate("/admin/dashboard");
-
           } else {
-            // Redirect to admin dashboard for other roles
             navigate("/admin/dashboard");
           }
         } catch (jwtError) {
           console.error('Error decoding JWT token:', jwtError);
-          // Fallback to using the response roles if JWT decoding fails
           const userRoles = response.roles || [];
           console.log('Fallback - User roles from response:', userRoles);
           
@@ -142,7 +129,6 @@ const Login = () => {
           }
         }
       } else {
-        // If no access_token in response, use the roles array as fallback
         const userRoles = response.roles || [];
         console.log('No access_token - Using roles from response:', userRoles);
         
@@ -163,99 +149,128 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-sacco-500 to-success-500 flex items-center justify-center text-white font-bold text-xl">
-            M
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sacco-500 via-sacco-600 to-sacco-700 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-sacco-500/30">
+              M
+            </div>
           </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-1">
+            Welcome Back
+          </h2>
+          <p className="text-sm text-gray-600">
+            Sign in to continue to your account
+          </p>
         </div>
-        <h2 className="mt-3 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Or{" "}
-          <Link to="/" className="font-medium text-primary hover:underline">
-            return to homepage
-          </Link>
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Login</CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access your account
-            </CardDescription>
+        {/* Card */}
+        <Card className="shadow-2xl border-0 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sacco-500 via-sacco-600 to-sacco-700"></div>
+          
+          <CardHeader className="pb-4 pt-6">
+            <CardTitle className="text-xl font-bold text-center text-gray-900">
+              Sign In
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="username">Email address</Label>
-                <Input
-                  id="username"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                  className={errors.username ? "border-red-500" : ""}
-                />
+
+          <CardContent className="px-6 pb-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="username" className="text-sm font-medium">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="username"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    required
+                    className={`h-10 pl-9 transition-all ${errors.username ? "border-red-500" : ""}`}
+                  />
+                </div>
                 {errors.username && (
-                  <p className="text-sm text-red-500">{errors.username}</p>
+                  <p className="text-xs text-red-500">{errors.username}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm font-medium text-primary hover:underline"
+                    className="text-xs font-medium text-sacco-600 hover:text-sacco-700 hover:underline transition-colors"
                   >
-                    Forgot your password?
+                    Forgot?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  className={errors.password ? "border-red-500" : ""}
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    className={`h-10 pl-9 pr-9 transition-all ${errors.password ? "border-red-500" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password}</p>
+                  <p className="text-xs text-red-500">{errors.password}</p>
                 )}
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center pt-1">
                 <Checkbox id="remember" />
                 <label
                   htmlFor="remember"
-                  className="ml-2 block text-sm text-gray-900"
+                  className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
                 >
                   Remember me
                 </label>
               </div>
 
-              <div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in"}
+              <div className="pt-2">
+                <Button 
+                  type="submit" 
+                  className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-sacco-600 to-sacco-700 hover:from-sacco-700 hover:to-sacco-800 shadow-lg hover:shadow-xl transition-all group" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Signing in...
+                    </span>
+                  ) : (
+                    <>
+                      Sign In
+                      <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-600">
+
+          <CardFooter className="flex flex-col gap-3 bg-gray-50 border-t py-4">
+            <p className="text-sm text-gray-600 text-center">
               Don't have an account?{" "}
               <Link
                 to="/register"
-                className="font-medium text-primary hover:underline"
+                className="font-semibold text-sacco-600 hover:text-sacco-700 hover:underline transition-colors"
               >
-                Register here
+                Create one
               </Link>
             </p>
           </CardFooter>
