@@ -78,6 +78,9 @@ export interface MemberRequest {
   dateOfBirth: string;
   address: string;
   status: string;
+  countyCode?: string;
+  constituencyCode?: string;
+  wardCode?: string;
 }
 
 export interface Member extends MemberRequest {

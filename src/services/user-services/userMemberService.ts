@@ -22,6 +22,9 @@ export interface MemberDetails {
   suspensionReason: string | null;
   suspendedAt: string | null;
   reactivatedAt: string | null;
+  countyCode: string | null;
+  constituencyCode: string | null;
+  wardCode: string | null;
 }
 
 // User member service for the member dashboard
