@@ -436,10 +436,17 @@ export interface ModeOfPaymentDto {
 
 // Next of Kin
 export interface NextOfKin {
-  id?: number;
-  nextOfKinId: number;
-  memberId: number;
-  member: Member;
+  [x: string]: string;
+  otherNames: string;
+  nationalId: string;
+  gender: "Male" | "Female" | "Other";
+  dob: string;
+  birthCertificateNo: string;
+  nationality: string;
+  // id?: number;
+  // nextOfKinId: number;
+  // memberId: number;
+  // member: Member;
   firstName: string;
   lastName: string;
   relationship: string;
@@ -457,6 +464,9 @@ export interface NextOfKinRequestDTO {
   phoneNumber: string;
   email: string;
   address: string;
+  nationalId?: string;
+  otherNames?: string;
+  gender?: string;
 }
 
 // Permission types
@@ -720,4 +730,32 @@ export interface UserDTO {
   role: {
     roleCode: number;
   }; 
+}
+
+export interface Expense {
+  id: number;
+  title: string;
+  description?: string;
+  amount: number;
+  categoryId?: number;
+  expenseDate?: string;
+  createdBy?: number;
+  createdAt?: string;
+  updatedAt?: string | null;
+  approvalStatus?: string;
+  approvedBy?: number | null;
+  approvedAt?: string | null;
+  rejectedBy?: number | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface ExpenseCategory {
+  id: number;
+  name: string;
+  description?: string;
+  active?: boolean;
+  createdBy?: number;
+  createdAt?: string;
+  updatedAt?: string | null;
 }
