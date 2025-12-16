@@ -47,4 +47,8 @@ export const expenseService = {
       },
     });
   },
+    getExpenseKpis: async () => {
+    const res = await apiClient.get("/api/v1/expense-kpi/range");
+    return res.data;
+  },
 };

@@ -4,12 +4,23 @@ import { expenseService } from "@/services/expenseService";
 import { expenseCategoryService } from "@/services/expenseCategoryService";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ExpenseForm from "@/components/expenses/ExpenseForm";
-import ExpenseCategoryForm from "@/components/expenses/ExpenseCategoryForm";
-import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, BarChart2, Clock, CheckCircle, XCircle } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 
 const Expenses = () => {
@@ -23,8 +34,12 @@ const Expenses = () => {
   const [rejectingExpense, setRejectingExpense] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  const { data: kpiStats, isLoading: kpiLoading } = useQuery({
+    queryKey: ["expense-kpis"],
+    queryFn: expenseService.getExpenseKpis,
+    staleTime: 60_000,
+  });
 
-  // Expense Categories Query
   const { data: categoriesData } = useQuery({
     queryKey: ["expense-categories", 0, 100],
     queryFn: () => expenseCategoryService.getCategories(0, 100),
@@ -32,18 +47,17 @@ const Expenses = () => {
   });
   const categories = categoriesData?.content ?? [];
 
-  // Expenses Query
   const { data, isLoading } = useQuery({
     queryKey: ["expenses", page],
     queryFn: () => expenseService.getExpenses(page, 10),
     placeholderData: (prev) => prev,
   });
 
-  // Mutations
   const createMut = useMutation({
-    mutationFn: (payload: any) => expenseService.createExpense(payload),
+    mutationFn: expenseService.createExpense,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
       toast({ title: "Success", description: "Expense created" });
       setShowForm(false);
     },
@@ -56,9 +70,11 @@ const Expenses = () => {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, payload }: any) => expenseService.updateExpense(id, payload),
+    mutationFn: ({ id, payload }: any) =>
+      expenseService.updateExpense(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
       toast({ title: "Success", description: "Expense updated" });
       setShowForm(false);
       setEditing(null);
@@ -72,9 +88,10 @@ const Expenses = () => {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: number) => expenseService.deleteExpense(id),
+    mutationFn: expenseService.deleteExpense,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
       toast({ title: "Success", description: "Expense deleted" });
     },
     onError: (err: any) =>
@@ -103,33 +120,33 @@ const Expenses = () => {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      toast({ title: "Success", description: "Expense action processed" });
+      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+      toast({ title: "Success", description: "Expense processed" });
     },
-    onError: (err: any) => {
-      const serverMessage =
-        err?.response?.data?.message || err?.message || "Failed";
+    onError: (err: any) =>
       toast({
         title: "Error",
-        description: serverMessage,
+        description:
+          err?.response?.data?.message || err?.message || "Failed",
         variant: "destructive",
-      });
-    },
+      }),
   });
 
-
-
-  // Table Rows
+  /* =========================
+     TABLE DATA
+  ========================== */
   const rows = (data?.content ?? []).map((e: any) => ({
     id: e.id,
     title: e.title,
     amount: e.amount,
-    category: categories.find((c: any) => c.id === e.categoryId)?.name ?? String(e.categoryId),
+    category:
+      categories.find((c: any) => c.id === e.categoryId)?.name ??
+      String(e.categoryId),
     date: e.expenseDate,
     status: e.approvalStatus,
     raw: e,
   }));
 
-  // Table Columns
   const columns = [
     { header: "ID", accessorKey: "id" },
     { header: "Title", accessorKey: "title" },
@@ -137,17 +154,21 @@ const Expenses = () => {
     { header: "Amount", accessorKey: "amount" },
     { header: "Date", accessorKey: "date" },
     {
-      header: "Status", accessorKey: "status",
+      header: "Status",
+      accessorKey: "status",
       cell: (row: any) => {
         let colorClass = "bg-gray-100 text-gray-800";
         if (row.status === "APPROVED") colorClass = "bg-green-100 text-green-800";
         else if (row.status === "REJECTED") colorClass = "bg-red-100 text-red-800";
-        else if (row.status === "PENDING_APPROVAL") colorClass = "bg-yellow-100 text-yellow-800";
-        return (<span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-          {row.status.replaceAll("_", " ")}
-        </span>
+        else if (row.status === "PENDING_APPROVAL")
+          colorClass = "bg-yellow-100 text-yellow-800";
+
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+            {row.status.replaceAll("_", " ")}
+          </span>
         );
-      }
+      },
     },
     {
       header: "Actions",
@@ -164,6 +185,7 @@ const Expenses = () => {
           >
             <Edit className="h-4 w-4" />
           </Button>
+
           <Button
             size="sm"
             variant="destructive"
@@ -171,18 +193,17 @@ const Expenses = () => {
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+
           {row.status === "PENDING_APPROVAL" && (
             <>
               <Button
                 size="sm"
-                variant="default"
                 onClick={() =>
                   approveMut.mutate({ id: row.id, action: "APPROVE" })
                 }
               >
                 Approve
               </Button>
-
               <Button
                 size="sm"
                 variant="outline"
@@ -197,20 +218,71 @@ const Expenses = () => {
           )}
         </div>
       ),
-    }
-
-
+    },
   ];
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 space-y-6">
+
+        {/* ================= KPI CARDS ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+            <CardContent className="flex items-center gap-3 py-4">
+              <BarChart2 className="h-8 w-8 text-blue-500" />
+              <div>
+                <div className="text-lg font-bold">
+                  {kpiLoading ? "--" : kpiStats?.totalCount}
+                </div>
+                <div className="text-xs text-blue-700">Total Expenses</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-green-50 to-green-100">
+            <CardContent className="flex items-center gap-3 py-4">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+              <div>
+                <div className="text-lg font-bold">
+                  {kpiLoading ? "--" : kpiStats?.approvedExpenses}
+                </div>
+                <div className="text-xs text-green-700">Approved</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100">
+            <CardContent className="flex items-center gap-3 py-4">
+              <Clock className="h-8 w-8 text-yellow-500" />
+              <div>
+                <div className="text-lg font-bold">
+                  {kpiLoading ? "--" : kpiStats?.pendingExpenses}
+                </div>
+                <div className="text-xs text-yellow-700">Pending</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-50 to-red-100">
+            <CardContent className="flex items-center gap-3 py-4">
+              <XCircle className="h-8 w-8 text-red-500" />
+              <div>
+                <div className="text-lg font-bold">
+                  {kpiLoading ? "--" : kpiStats?.rejectedExpenses}
+                </div>
+                <div className="text-xs text-red-700">Rejected</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ================= EXPENSE TABLE ================= */}
         <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <CardHeader className="flex flex-col sm:flex-row justify-between gap-4">
             <div>
-              <CardTitle className="text-lg sm:text-xl">Expenses</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Manage SACCO expenses and track spending categories
+              <CardTitle>Expenses</CardTitle>
+              <CardDescription>
+                Manage SACCO expenses and approvals
               </CardDescription>
             </div>
             <Button
@@ -218,7 +290,6 @@ const Expenses = () => {
                 setEditing(null);
                 setShowForm(true);
               }}
-              className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Expense
@@ -230,16 +301,23 @@ const Expenses = () => {
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-              <DataTable data={rows} columns={columns} keyField="id" emptyMessage="No expenses found" />
+              <DataTable
+                data={rows}
+                columns={columns}
+                keyField="id"
+                emptyMessage="No expenses found"
+              />
             )}
           </CardContent>
         </Card>
 
-        {/* Expense Form Dialog */}
+        {/* ================= FORMS ================= */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit Expense" : "Add Expense"}</DialogTitle>
+              <DialogTitle>
+                {editing ? "Edit Expense" : "Add Expense"}
+              </DialogTitle>
             </DialogHeader>
             <ExpenseForm
               categories={categories}
@@ -248,51 +326,46 @@ const Expenses = () => {
                 setShowForm(false);
                 setEditing(null);
               }}
-              onSubmit={(payload) => {
-                if (editing) updateMut.mutate({ id: editing.id, payload });
-                else createMut.mutate(payload);
-              }}
+              onSubmit={(payload) =>
+                editing
+                  ? updateMut.mutate({ id: editing.id, payload })
+                  : createMut.mutate(payload)
+              }
             />
-            <DialogFooter />
           </DialogContent>
         </Dialog>
+
+        {/* ================= REJECT MODAL ================= */}
         <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Reject Expense</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Please provide a reason for rejecting expense <strong>{rejectingExpense?.title}</strong>.
-              </p>
-              <textarea
-                className="w-full border rounded p-2"
-                rows={3}
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Enter rejection reason..."
-              />
-            </div>
-            <DialogFooter className="flex justify-end gap-2 pt-4">
+            <textarea
+              className="w-full border rounded p-2"
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+            />
+            <DialogFooter>
               <Button variant="outline" onClick={() => setShowRejectModal(false)}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => {
-                  if (rejectingExpense) {
-                    approveMut.mutate({
-                      id: rejectingExpense.id,
-                      action: "REJECT",
-                      rejectionReason: rejectReason,
-                    });
-                  }
+                  approveMut.mutate({
+                    id: rejectingExpense.id,
+                    action: "REJECT",
+                    rejectionReason: rejectReason,
+                  });
                   setRejectReason("");
                   setRejectingExpense(null);
                   setShowRejectModal(false);
                 }}
               >
-                Submit Rejection
+                Reject
               </Button>
             </DialogFooter>
           </DialogContent>
