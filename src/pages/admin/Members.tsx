@@ -29,6 +29,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +43,9 @@ import { memberService } from "@/services/memberService";
 import { nextOfKinService } from "@/services/nextOfKinService";
 import { Member, NextOfKin } from "@/types/api";
 import { formatDateSafe } from "@/lib/utils";
-import NextOfKinManagement from "@/pages/admin/NextOfKinManagement"; // add import
+import NextOfKinManagement from "@/pages/admin/NextOfKinManagement";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 const memberFormSchema = z.object({
   memberId: z.number().optional(),
   firstName: z.string().min(1, "First name is required"),
@@ -110,6 +117,9 @@ const Members = () => {
             address: data.address!,
             dateOfBirth: data.dateOfBirth,
             status: data.status,
+            countyCode: data.countyCode,
+            constituencyCode: data.constituencyCode,
+            wardCode: data.wardCode
           })
         : memberService.createMember({
             memberId: 0,
@@ -121,6 +131,9 @@ const Members = () => {
             address: data.address!,
             dateOfBirth: data.dateOfBirth,
             status: data.status,
+            countyCode: data.countyCode,
+            constituencyCode: data.constituencyCode,
+            wardCode: data.wardCode
           }),
     onSuccess: (data) => {
       if (!isEditing) {
@@ -131,6 +144,7 @@ const Members = () => {
         title: "Success",
         description: "Member details saved successfully",
       });
+      setShowForm(false);
     },
     onError: (error: any) => {
       toast({
@@ -141,7 +155,6 @@ const Members = () => {
     },
   });
 
-
   const handleAddMember = () => {
     form.reset({
       firstName: "",
@@ -150,30 +163,42 @@ const Members = () => {
       phoneNumber: "",
       nationalId: "",
       address: "",
+      countyCode: "",
+      constituencyCode: "",
+      wardCode: "",
       nextOfKins: [],
     });
     setIsEditing(false);
     setShowForm(true);
   };
 
-  const handleEditMember = (member: Member, tab: "member" | "nextOfKin" = "member") => {
+  const handleEditMember = (member: Member) => {
     form.reset({
       ...member,
+      countyCode: member.countyCode || "",
+      constituencyCode: member.constituencyCode || "",
+      wardCode: member.wardCode || "",
       nextOfKins: member.nextOfKins || [],
     });
     setIsEditing(true);
-  setShowForm(true);
+    setShowForm(true);
+    
+    // Fetch location data if editing
+    if (member.countyCode) {
+      fetchConstituencies(member.countyCode);
+    }
+    if (member.constituencyCode) {
+      fetchWards(member.constituencyCode);
+    }
   };
 
   const onSubmitMember = (values: Omit<MemberFormValues, "nextOfKins">) => {
-    // Provide default values for required fields if not present
     memberMutation.mutate({
       ...values,
       dateOfBirth: (values as any).dateOfBirth || "",
       status: (values as any).status || "ACTIVE",
     });
   };
-
 
   const removeNextOfKin = (index: number) => {
     remove(index);
@@ -197,7 +222,6 @@ const Members = () => {
         >
           {row.status}
         </Badge>
-        
       ),
     },
     {
@@ -226,38 +250,74 @@ const Members = () => {
         </div>
       ),
     },
+    { 
+      header: "County", 
+      accessorKey: "countyCode",
+      cell: (row: any) => row.countyCode
+        ? counties.find((c) => c.countyCode === row.countyCode)?.name || row.countyCode
+        : "--"
+    },
     {
       header: "Actions",
       accessorKey: "actions",
       cell: (row: any) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleEditMember(row)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => openNextOfKinModal(row.memberId)}>
-            <Users className="h-4 w-4" />
-          </Button>
+        <TooltipProvider>
+          <div className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="outline" onClick={() => handleEditMember(row)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit member details</p>
+              </TooltipContent>
+            </Tooltip>
 
-          {((row.status || "").toString().toUpperCase() === "ACTIVE" || (row.status || "").toString().toUpperCase() === "PENDING"  ) ? (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => openActionDialog(row, "suspend")}
-              title="Suspend member"
-            >
-              Suspend
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => openActionDialog(row, "reactivate")}
-              title="Reactivate member"
-            >
-              Reactivate
-            </Button>
-          )}
-        </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" onClick={() => openNextOfKinModal(row.memberId)}>
+                  <Users className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Manage next of kin</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {((row.status || "").toString().toUpperCase() === "ACTIVE" || (row.status || "").toString().toUpperCase() === "PENDING") ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => openActionDialog(row, "suspend")}
+                  >
+                    Suspend
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Suspend this member</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => openActionDialog(row, "reactivate")}
+                  >
+                    Reactivate
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Reactivate this member</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
       ),
     },
   ];
@@ -291,7 +351,6 @@ const Members = () => {
         res = await memberService.reactivateMember({ memmberId: actionMember.memberId, activationReason: actionReason });
       }
 
-      // Normalize/check response code from backend and only treat "200" as success
       const respCode = res?.responseCode ?? res?.code ?? (res?.status ? String(res.status) : undefined);
       const isSuccess = respCode === "200" || respCode === 200 || respCode === "201" || respCode === 201;
 
@@ -318,10 +377,10 @@ const Members = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
 
   const openNextOfKinModal = (memberId: number) => {
-    console.log("openNextOfKinModal called with", memberId);
     setSelectedMemberId(memberId);
     setShowNextOfKinModal(true);
   };
+
   const closeNextOfKinModal = () => {
     setSelectedMemberId(null);
     setShowNextOfKinModal(false);
@@ -333,13 +392,13 @@ const Members = () => {
         const data = await memberService.getMemberKpiStats();
         setKpiStats(data);
       } catch (error) {
-        // Optionally handle error
+        console.error("Error fetching KPI stats:", error);
       }
     };
     fetchKpiStats();
   }, []);
 
-  // location lists / loading (use memberService)
+  // Location lists / loading
   const [counties, setCounties] = useState<{ countyCode: string; name: string }[]>([]);
   const [constituencies, setConstituencies] = useState<{ constituencyCode: string; name: string }[]>([]);
   const [wards, setWards] = useState<{ cawCode: string; name: string }[]>([]);
@@ -351,7 +410,6 @@ const Members = () => {
   const fetchCounties = async () => {
     try {
       setLoadingCounties(true);
-      // memberService should expose a method to fetch counties; adjust if signature differs
       const res: any = await memberService.getCounties?.(0, LOC_PAGE_SIZE) ?? await memberService.getLocationCounties?.({ page: 0, size: LOC_PAGE_SIZE });
       const json = res?.data ?? res ?? {};
       setCounties(Array.isArray(json.content) ? json.content : (json.content ?? []));
@@ -401,7 +459,6 @@ const Members = () => {
 
   useEffect(() => {
     fetchCounties();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -444,11 +501,13 @@ const Members = () => {
           </CardContent>
         </Card>
       </div>
+
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <CardTitle className="text-lg sm:text-xl">Members</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Manage SACCO members and their next of kin
+            <CardDescription className="text-xs sm:text-sm">
+              Manage SACCO members and their next of kin
             </CardDescription>
           </div>
           <Button onClick={handleAddMember} className="w-full sm:w-auto">
@@ -472,6 +531,7 @@ const Members = () => {
         </CardContent>
       </Card>
 
+      {/* Member Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -481,205 +541,197 @@ const Members = () => {
           </DialogHeader>
 
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit( onSubmitMember)}
-              className="space-y-6 pt-2"
-            >
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <FormField
-                      control={form.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="nationalId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>National ID</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
+            <div className="space-y-6 pt-2">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <FormField
                     control={form.control}
-                    name="address"
+                    name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Textarea {...field} rows={3} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <FormField control={form.control} name="countyCode" render={({ field }) => (
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
                       <FormItem>
-                        <FormLabel>County</FormLabel>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="nationalId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>National ID</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                  <FormField control={form.control} name="countyCode" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>County</FormLabel>
+                      <FormControl>
+                        <Select value={field.value ?? ""} onValueChange={(val) => {
+                          field.onChange(val || undefined);
+                          form.setValue("constituencyCode", undefined);
+                          form.setValue("wardCode", undefined);
+                          setConstituencies([]);
+                          setWards([]);
+                          if (val) fetchConstituencies(val);
+                        }}>
+                          <SelectTrigger className="w-full" disabled={loadingCounties}>
+                            <SelectValue placeholder={loadingCounties ? "Loading..." : "Select county"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {counties.map(c => <SelectItem key={c.countyCode} value={c.countyCode}>{c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+
+                  <FormField control={form.control} name="constituencyCode" render={({ field }) => {
+                    const countySelected = !!form.getValues().countyCode;
+                    return (
+                      <FormItem>
+                        <FormLabel>Constituency</FormLabel>
                         <FormControl>
                           <Select value={field.value ?? ""} onValueChange={(val) => {
                             field.onChange(val || undefined);
-                            // clear downstream values and fetch constituencies
-                            form.setValue("constituencyCode", undefined);
                             form.setValue("wardCode", undefined);
-                            setConstituencies([]);
                             setWards([]);
-                            if (val) fetchConstituencies(val);
+                            if (val) fetchWards(val);
                           }}>
-                            <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={loadingCounties}>
-                              <SelectValue placeholder={loadingCounties ? "Loading counties..." : "Select county"} />
+                            <SelectTrigger className="w-full" disabled={!countySelected || loadingConstituencies}>
+                              <SelectValue placeholder={!countySelected ? "Select county first" : (loadingConstituencies ? "Loading..." : "Select constituency")} />
                             </SelectTrigger>
                             <SelectContent>
-                              {counties.map(c => <SelectItem key={c.countyCode} value={c.countyCode}>{c.name}</SelectItem>)}
+                              {constituencies.map(c => <SelectItem key={c.constituencyCode} value={c.constituencyCode}>{c.name}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
-                    )} />
+                    );
+                  }} />
 
-                    <FormField control={form.control} name="constituencyCode" render={({ field }) => {
-                      const countySelected = !!form.getValues().countyCode;
-                      return (
-                        <FormItem>
-                          <FormLabel>Constituency</FormLabel>
-                          <FormControl>
-                            <Select value={field.value ?? ""} onValueChange={(val) => {
-                              field.onChange(val || undefined);
-                              form.setValue("wardCode", undefined);
-                              setWards([]);
-                              if (val) fetchWards(val);
-                            }}>
-                              <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={!countySelected || loadingConstituencies}>
-                                <SelectValue placeholder={!countySelected ? "Select county first" : (loadingConstituencies ? "Loading..." : "Select constituency")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {constituencies.map(c => <SelectItem key={c.constituencyCode} value={c.constituencyCode}>{c.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }} />
-
-                    <FormField control={form.control} name="wardCode" render={({ field }) => {
-                      const constituencySelected = !!form.getValues().constituencyCode;
-                      return (
-                        <FormItem>
-                          <FormLabel>Ward</FormLabel>
-                          <FormControl>
-                            <Select value={field.value ?? ""} onValueChange={(val) => field.onChange(val || undefined)}>
-                              <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={!constituencySelected || loadingWards}>
-                                <SelectValue placeholder={!constituencySelected ? "Select constituency first" : (loadingWards ? "Loading..." : "Select ward")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {wards.map(w => <SelectItem key={w.cawCode} value={w.cawCode}>{w.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }} />
-                  </div>
+                  <FormField control={form.control} name="wardCode" render={({ field }) => {
+                    const constituencySelected = !!form.getValues().constituencyCode;
+                    return (
+                      <FormItem>
+                        <FormLabel>Ward</FormLabel>
+                        <FormControl>
+                          <Select value={field.value ?? ""} onValueChange={(val) => field.onChange(val || undefined)}>
+                            <SelectTrigger className="w-full" disabled={!constituencySelected || loadingWards}>
+                              <SelectValue placeholder={!constituencySelected ? "Select constituency first" : (loadingWards ? "Loading..." : "Select ward")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {wards.map(w => <SelectItem key={w.cawCode} value={w.cawCode}>{w.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }} />
                 </div>
+              </div>
 
               <DialogFooter className="pt-4">
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowForm(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                    // disabled={memberMutation.isLoading}
-                    >
-                      {/* {memberMutation.isLoading && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )} */}
-                      {isEditing ? "Update Member" : "Save Member Details"}
-                    </Button>
-                    {isEditing && (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          const id = form.getValues().memberId;
-                          if (id) {
-                            // close member form and open NextOfKinManagement for this member
-                            setShowForm(false);
-                            openNextOfKinModal(Number(id));
-                          } else {
-                            toast({ title: "Error", description: "Member ID missing", variant: "destructive" });
-                          }
-                        }}
-                      >
-                        Edit Next of Kin
-                      </Button>
-                    )}
-                  </>
-                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={form.handleSubmit(onSubmitMember)}
+                  disabled={memberMutation.isPending}
+                >
+                  {memberMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {isEditing ? "Update Member" : "Save Member Details"}
+                </Button>
+                {isEditing && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const id = form.getValues().memberId;
+                      if (id) {
+                        setShowForm(false);
+                        openNextOfKinModal(Number(id));
+                      } else {
+                        toast({ title: "Error", description: "Member ID missing", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    Edit Next of Kin
+                  </Button>
+                )}
               </DialogFooter>
-            </form>
+            </div>
           </Form>
         </DialogContent>
       </Dialog>
@@ -719,18 +771,19 @@ const Members = () => {
             <Button
               onClick={handleConfirmAction}
               variant={actionType === "suspend" ? "destructive" : "default"}
-              // isLoading={actionLoading}
+              disabled={actionLoading}
             >
+              {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {actionType === "suspend" ? "Suspend Member" : "Reactivate Member"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Next of Kin modal (shows existing + add in same modal) */}
+      {/* Next of Kin modal */}
       {showNextOfKinModal && selectedMemberId != null && (
         <NextOfKinManagement
-          open={true}
+          open={showNextOfKinModal}
           memberId={selectedMemberId}
           onClose={closeNextOfKinModal}
         />
@@ -739,6 +792,4 @@ const Members = () => {
   );
 };
 
-
 export default Members;
-
