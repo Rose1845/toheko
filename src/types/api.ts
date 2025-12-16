@@ -436,6 +436,13 @@ export interface ModeOfPaymentDto {
 
 // Next of Kin
 export interface NextOfKin {
+  [x: string]: string;
+  otherNames: string;
+  nationalId: string;
+  gender: "Male" | "Female" | "Other";
+  dob: string;
+  birthCertificateNo: string;
+  nationality: string;
   id?: number;
   nextOfKinId: number;
   memberId: number;
@@ -457,6 +464,9 @@ export interface NextOfKinRequestDTO {
   phoneNumber: string;
   email: string;
   address: string;
+  nationalId?: string;
+  otherNames?: string;
+  gender?: string;
 }
 
 // Permission types

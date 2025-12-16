@@ -37,6 +37,8 @@ import { memberService } from "@/services/memberService";
 import { nextOfKinService } from "@/services/nextOfKinService";
 import { Member, NextOfKin } from "@/types/api";
 import { formatDateSafe } from "@/lib/utils";
+import NextOfKinManagement from "@/pages/admin/NextOfKinManagement"; // add import
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 const memberFormSchema = z.object({
   memberId: z.number().optional(),
   firstName: z.string().min(1, "First name is required"),
@@ -45,6 +47,9 @@ const memberFormSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   nationalId: z.string().min(1, "National ID is required"),
   address: z.string().min(1, "Address is required"),
+  countyCode: z.string().optional(),
+  constituencyCode: z.string().optional(),
+  wardCode: z.string().optional(),
   nextOfKins: z.array(
     z.object({
       id: z.number().optional(),
@@ -62,7 +67,6 @@ type MemberFormValues = z.infer<typeof memberFormSchema>;
 const Members = () => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("member");
   const [kpiStats, setKpiStats] = useState(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,6 +80,9 @@ const Members = () => {
       phoneNumber: "",
       nationalId: "",
       address: "",
+      countyCode: "",
+      constituencyCode: "",
+      wardCode: "",
       nextOfKins: [],
     },
   });
@@ -124,10 +131,6 @@ const Members = () => {
         title: "Success",
         description: "Member details saved successfully",
       });
-      // Only auto-switch to next of kin tab for new members
-      if (!isEditing) {
-        setActiveTab("nextOfKin");
-      }
     },
     onError: (error: any) => {
       toast({
@@ -138,51 +141,6 @@ const Members = () => {
     },
   });
 
-  const handleAddNextOfKin = async (nextOfKin: NextOfKin, memberId: number) => {
-    try {
-      const response = await nextOfKinService.createNextOfKin({
-        ...nextOfKin,
-        memberId
-      });
-      return response;
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add next of kin",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const handleUpdateNextOfKin = async (nextOfKin: NextOfKin) => {
-    try {
-      if (!nextOfKin.id) return;
-      const response = await nextOfKinService.updateNextOfKin(nextOfKin.id, nextOfKin);
-      return response;
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update next of kin",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const handleDeleteNextOfKin = async (id: number) => {
-    try {
-      await nextOfKinService.deleteNextOfKin(id);
-      return true;
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete next of kin",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
 
   const handleAddMember = () => {
     form.reset({
@@ -195,7 +153,6 @@ const Members = () => {
       nextOfKins: [],
     });
     setIsEditing(false);
-    setActiveTab("member");
     setShowForm(true);
   };
 
@@ -205,8 +162,7 @@ const Members = () => {
       nextOfKins: member.nextOfKins || [],
     });
     setIsEditing(true);
-    setActiveTab(tab); // Allow opening directly to next of kin tab
-    setShowForm(true);
+  setShowForm(true);
   };
 
   const onSubmitMember = (values: Omit<MemberFormValues, "nextOfKins">) => {
@@ -218,66 +174,6 @@ const Members = () => {
     });
   };
 
-  const onSubmitNextOfKin = async (values: MemberFormValues) => {
-    if (!values.memberId) return;
-
-    try {
-      const memberId = values.memberId;
-      const currentNextOfKins = values.nextOfKins;
-      const originalNextOfKins = isEditing
-        ? members?.find(m => m.memberId === memberId)?.nextOfKins || []
-        : [];
-
-      // Process deletions
-      const toDelete = originalNextOfKins.filter(original =>
-        !currentNextOfKins.some(current => current.id === original.id)
-      );
-      await Promise.all(toDelete.map(nok => nok.id ? handleDeleteNextOfKin(nok.id) : Promise.resolve()));
-
-      // Process updates and additions
-      await Promise.all(currentNextOfKins.map(nok => {
-        if (nok.id) {
-          // Map form object to NextOfKin type
-          const original = originalNextOfKins.find(orig => orig.id === nok.id);
-          return handleUpdateNextOfKin({
-            ...original,
-            ...nok,
-            nextOfKinId: nok.id ?? original?.nextOfKinId ?? 0,
-            memberId: memberId,
-          });
-        } else {
-          // Map form object to NextOfKin type for creation
-          return handleAddNextOfKin(
-            {
-              ...nok,
-              nextOfKinId: 0, // or undefined if your backend auto-generates
-              memberId: memberId,
-            } as NextOfKin,
-            memberId
-          );
-        }
-      }));
-
-      queryClient.invalidateQueries({ queryKey: ["members"] });
-      toast({
-        title: "Success",
-        description: "Next of kin saved successfully",
-      });
-      setShowForm(false);
-    } catch (error) {
-      console.error("Error saving next of kin:", error);
-    }
-  };
-
-  const addNextOfKin = () => {
-    append({
-      name: "",
-      relationship: "",
-      phoneNumber: "",
-      email: "",
-      address: "",
-    });
-  };
 
   const removeNextOfKin = (index: number) => {
     remove(index);
@@ -293,18 +189,15 @@ const Members = () => {
     { header: "Email", accessorKey: "email" },
     { header: "Phone", accessorKey: "phoneNumber" },
     {
-      header: "Next of Kin",
-      accessorKey: "nextOfKins",
+      header: "Status",
+      accessorKey: "status",
       cell: (row: any) => (
-        <Button
-          variant="link"
-          className="h-auto p-0"
-          onClick={() => handleEditMember(row, "nextOfKin")}
+        <Badge
+          variant={row.status === "ACTIVE" ? "default" : row.status === "SUSPENDED" ? "destructive" : "secondary"}
         >
-          <Badge variant="outline">
-            {row.nextOfKins?.length || 0}
-          </Badge>
-        </Button>
+          {row.status}
+        </Badge>
+        
       ),
     },
     {
@@ -338,24 +231,101 @@ const Members = () => {
       accessorKey: "actions",
       cell: (row: any) => (
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditMember(row)}
-          >
+          <Button size="sm" variant="outline" onClick={() => handleEditMember(row)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleEditMember(row, "nextOfKin")}
-          >
+          <Button size="sm" variant="ghost" onClick={() => openNextOfKinModal(row.memberId)}>
             <Users className="h-4 w-4" />
           </Button>
+
+          {((row.status || "").toString().toUpperCase() === "ACTIVE" || (row.status || "").toString().toUpperCase() === "PENDING"  ) ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => openActionDialog(row, "suspend")}
+              title="Suspend member"
+            >
+              Suspend
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => openActionDialog(row, "reactivate")}
+              title="Reactivate member"
+            >
+              Reactivate
+            </Button>
+          )}
         </div>
       ),
     },
   ];
+
+  // Suspend / Reactivate action dialog state
+  const [showActionDialog, setShowActionDialog] = useState(false);
+  const [actionType, setActionType] = useState<"suspend" | "reactivate" | null>(null);
+  const [actionMember, setActionMember] = useState<Member | null>(null);
+  const [actionReason, setActionReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const openActionDialog = (member: Member, type: "suspend" | "reactivate") => {
+    setActionMember(member);
+    setActionType(type);
+    setActionReason("");
+    setShowActionDialog(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!actionMember || !actionType) return;
+    if (!actionReason.trim()) {
+      toast({ title: "Error", description: "Please provide a reason", variant: "destructive" });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      let res: any;
+      if (actionType === "suspend") {
+        res = await memberService.suspendMember(actionMember.memberId, { reason: actionReason });
+      } else {
+        res = await memberService.reactivateMember({ memmberId: actionMember.memberId, activationReason: actionReason });
+      }
+
+      // Normalize/check response code from backend and only treat "200" as success
+      const respCode = res?.responseCode ?? res?.code ?? (res?.status ? String(res.status) : undefined);
+      const isSuccess = respCode === "200" || respCode === 200 || respCode === "201" || respCode === 201;
+
+      if (isSuccess) {
+        queryClient.invalidateQueries({ queryKey: ["members"] });
+        toast({ title: "Success", description: res?.message || (actionType === "suspend" ? "Member suspended" : "Member reactivated") });
+        setShowActionDialog(false);
+        setActionMember(null);
+        setActionType(null);
+        setActionReason("");
+      } else {
+        toast({ title: "Error", description: res?.message || "Action failed", variant: "destructive" });
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || error?.message || "Action failed";
+      toast({ title: "Error", description: errMsg, variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Next of Kin modal state
+  const [showNextOfKinModal, setShowNextOfKinModal] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
+
+  const openNextOfKinModal = (memberId: number) => {
+    console.log("openNextOfKinModal called with", memberId);
+    setSelectedMemberId(memberId);
+    setShowNextOfKinModal(true);
+  };
+  const closeNextOfKinModal = () => {
+    setSelectedMemberId(null);
+    setShowNextOfKinModal(false);
+  };
 
   useEffect(() => {
     const fetchKpiStats = async () => {
@@ -367,6 +337,71 @@ const Members = () => {
       }
     };
     fetchKpiStats();
+  }, []);
+
+  // location lists / loading (use memberService)
+  const [counties, setCounties] = useState<{ countyCode: string; name: string }[]>([]);
+  const [constituencies, setConstituencies] = useState<{ constituencyCode: string; name: string }[]>([]);
+  const [wards, setWards] = useState<{ cawCode: string; name: string }[]>([]);
+  const [loadingCounties, setLoadingCounties] = useState(false);
+  const [loadingConstituencies, setLoadingConstituencies] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+  const LOC_PAGE_SIZE = 100;
+
+  const fetchCounties = async () => {
+    try {
+      setLoadingCounties(true);
+      // memberService should expose a method to fetch counties; adjust if signature differs
+      const res: any = await memberService.getCounties?.(0, LOC_PAGE_SIZE) ?? await memberService.getLocationCounties?.({ page: 0, size: LOC_PAGE_SIZE });
+      const json = res?.data ?? res ?? {};
+      setCounties(Array.isArray(json.content) ? json.content : (json.content ?? []));
+    } catch (e) {
+      console.error("fetchCounties error", e);
+      setCounties([]);
+    } finally {
+      setLoadingCounties(false);
+    }
+  };
+
+  const fetchConstituencies = async (countyCode?: string | null) => {
+    if (!countyCode) {
+      setConstituencies([]);
+      return;
+    }
+    try {
+      setLoadingConstituencies(true);
+      const res: any = await memberService.getConstituencies?.(countyCode, 0, LOC_PAGE_SIZE) ?? await memberService.getLocationConstituencies?.(countyCode);
+      const json = res?.data ?? res ?? {};
+      setConstituencies(Array.isArray(json.content) ? json.content : (json.content ?? []));
+    } catch (e) {
+      console.error("fetchConstituencies error", e);
+      setConstituencies([]);
+    } finally {
+      setLoadingConstituencies(false);
+    }
+  };
+
+  const fetchWards = async (constituencyCode?: string | null) => {
+    if (!constituencyCode) {
+      setWards([]);
+      return;
+    }
+    try {
+      setLoadingWards(true);
+      const res: any = await memberService.getWards?.(constituencyCode, 0, LOC_PAGE_SIZE) ?? await memberService.getLocationWards?.(constituencyCode);
+      const json = res?.data ?? res ?? {};
+      setWards(Array.isArray(json.content) ? json.content : (json.content ?? []));
+    } catch (e) {
+      console.error("fetchWards error", e);
+      setWards([]);
+    } finally {
+      setLoadingWards(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCounties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -443,28 +478,13 @@ const Members = () => {
             <DialogTitle>
               {isEditing ? "Edit Member" : "Add New Member"}
             </DialogTitle>
-            {activeTab === "nextOfKin" && (
-              <div className="flex items-center space-x-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab("member")}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  {isEditing ? "Member Details" : "Back to Member"}
-                </Button>
-              </div>
-            )}
           </DialogHeader>
 
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(
-                activeTab === "member" ? onSubmitMember : onSubmitNextOfKin
-              )}
+              onSubmit={form.handleSubmit( onSubmitMember)}
               className="space-y-6 pt-2"
             >
-              {activeTab === "member" ? (
                 <div className="space-y-4 sm:space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <FormField
@@ -547,125 +567,81 @@ const Members = () => {
                       </FormItem>
                     )}
                   />
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">Next of Kin Details</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {isEditing ? "Edit" : "Add"} next of kin for this member
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addNextOfKin}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Next of Kin
-                    </Button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <FormField control={form.control} name="countyCode" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>County</FormLabel>
+                        <FormControl>
+                          <Select value={field.value ?? ""} onValueChange={(val) => {
+                            field.onChange(val || undefined);
+                            // clear downstream values and fetch constituencies
+                            form.setValue("constituencyCode", undefined);
+                            form.setValue("wardCode", undefined);
+                            setConstituencies([]);
+                            setWards([]);
+                            if (val) fetchConstituencies(val);
+                          }}>
+                            <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={loadingCounties}>
+                              <SelectValue placeholder={loadingCounties ? "Loading counties..." : "Select county"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {counties.map(c => <SelectItem key={c.countyCode} value={c.countyCode}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="constituencyCode" render={({ field }) => {
+                      const countySelected = !!form.getValues().countyCode;
+                      return (
+                        <FormItem>
+                          <FormLabel>Constituency</FormLabel>
+                          <FormControl>
+                            <Select value={field.value ?? ""} onValueChange={(val) => {
+                              field.onChange(val || undefined);
+                              form.setValue("wardCode", undefined);
+                              setWards([]);
+                              if (val) fetchWards(val);
+                            }}>
+                              <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={!countySelected || loadingConstituencies}>
+                                <SelectValue placeholder={!countySelected ? "Select county first" : (loadingConstituencies ? "Loading..." : "Select constituency")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {constituencies.map(c => <SelectItem key={c.constituencyCode} value={c.constituencyCode}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }} />
+
+                    <FormField control={form.control} name="wardCode" render={({ field }) => {
+                      const constituencySelected = !!form.getValues().constituencyCode;
+                      return (
+                        <FormItem>
+                          <FormLabel>Ward</FormLabel>
+                          <FormControl>
+                            <Select value={field.value ?? ""} onValueChange={(val) => field.onChange(val || undefined)}>
+                              <SelectTrigger className="w-full border-gray-300 rounded-md" disabled={!constituencySelected || loadingWards}>
+                                <SelectValue placeholder={!constituencySelected ? "Select constituency first" : (loadingWards ? "Loading..." : "Select ward")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {wards.map(w => <SelectItem key={w.cawCode} value={w.cawCode}>{w.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }} />
                   </div>
-
-                  <Separator />
-
-                  {fields.length === 0 ? (
-                    <div className="text-center py-8 border rounded-lg">
-                      <Users className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <h4 className="mt-2 font-medium">No Next of Kin Added</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Add at least one next of kin for this member
-                      </p>
-                    </div>
-                  ) : (
-                    fields.map((field, index) => (
-                      <div key={field.id} className="border rounded-lg p-4 space-y-4 relative group">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-3 right-3 h-8 w-8 p-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeNextOfKin(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`nextOfKins.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Full Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`nextOfKins.${index}.relationship`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Relationship</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`nextOfKins.${index}.phoneNumber`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`nextOfKins.${index}.email`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <FormField
-                          control={form.control}
-                          name={`nextOfKins.${index}.address`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Address (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} rows={2} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    ))
-                  )}
                 </div>
-              )}
 
               <DialogFooter className="pt-4">
-                {activeTab === "member" ? (
                   <>
                     <Button
                       type="button"
@@ -686,36 +662,83 @@ const Members = () => {
                     {isEditing && (
                       <Button
                         type="button"
-                        onClick={() => setActiveTab("nextOfKin")}
+                        onClick={() => {
+                          const id = form.getValues().memberId;
+                          if (id) {
+                            // close member form and open NextOfKinManagement for this member
+                            setShowForm(false);
+                            openNextOfKinModal(Number(id));
+                          } else {
+                            toast({ title: "Error", description: "Member ID missing", variant: "destructive" });
+                          }
+                        }}
                       >
                         Edit Next of Kin
                       </Button>
                     )}
                   </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => isEditing ? setShowForm(false) : setActiveTab("member")}
-                    >
-                      {isEditing ? "Cancel" : "Back"}
-                    </Button>
-                    <Button
-                      type="submit"
-                    >
-                      {isEditing ? "Save Changes" : "Complete Registration"}
-                    </Button>
-                  </>
-                )}
+                
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Suspend / Reactivate Action Dialog */}
+      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+        <DialogContent className="sm:max-w-[400px] max-w-full">
+          <DialogHeader>
+            <DialogTitle>
+              {actionType === "suspend" ? "Suspend Member" : "Reactivate Member"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              {actionType === "suspend"
+                ? "Suspending a member will deactivate their account. You can reactivate it later."
+                : "Reactivating a member will restore their account access."}
+            </p>
+            <div>
+              <label className="text-sm font-medium">Reason</label>
+              <Textarea
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                rows={4}
+                placeholder="Enter reason here..."
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowActionDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmAction}
+              variant={actionType === "suspend" ? "destructive" : "default"}
+              // isLoading={actionLoading}
+            >
+              {actionType === "suspend" ? "Suspend Member" : "Reactivate Member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Next of Kin modal (shows existing + add in same modal) */}
+      {showNextOfKinModal && selectedMemberId != null && (
+        <NextOfKinManagement
+          open={true}
+          memberId={selectedMemberId}
+          onClose={closeNextOfKinModal}
+        />
+      )}
     </div>
   );
 };
+
 
 export default Members;
 

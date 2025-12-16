@@ -1,4 +1,3 @@
-
 import apiClient from './api';
 import { NextOfKin, NextOfKinRequestDTO, AcknowledgementResponse } from '../types/api';
 
@@ -25,6 +24,11 @@ export const nextOfKinService = {
 
   deleteNextOfKin: async (nextOfKinId: number): Promise<AcknowledgementResponse> => {
     const response = await apiClient.delete(`/api/v1/next-of-kin/${nextOfKinId}`);
+    return response.data;
+  },
+
+  getNextOfKinsByMember: async (memberId: number): Promise<any[]> => {
+    const response = await apiClient.get(`/api/v1/next-of-kin/member/${memberId}`);
     return response.data;
   }
 };
