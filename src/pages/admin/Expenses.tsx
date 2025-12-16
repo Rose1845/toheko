@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import DashboardLayout from "./DashboardLayout";
 import { expenseService } from "@/services/expenseService";
 import { expenseCategoryService } from "@/services/expenseCategoryService";
 import { useToast } from "@/hooks/use-toast";
@@ -20,8 +21,41 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import ExpenseForm from "@/components/expenses/ExpenseForm";
-import { Loader2, Plus, Edit, Trash2, BarChart2, Clock, CheckCircle, XCircle } from "lucide-react";
-import DashboardLayout from "./DashboardLayout";
+import {
+  Loader2,
+  Plus,
+  Edit,
+  Trash2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Layers,
+  DollarSign,
+} from "lucide-react";
+
+/* =========================
+   KPI CARD
+========================= */
+const KpiCard = ({
+  icon: Icon,
+  label,
+  value,
+  bg,
+  iconColor,
+  textColor,
+}: any) => (
+  <Card className={`${bg} shadow-sm`}>
+    <CardContent className="flex items-center gap-3 py-4">
+      <Icon className={`h-8 w-8 ${iconColor}`} />
+      <div>
+        <div className={`text-lg font-bold ${textColor}`}>
+          {value ?? "--"}
+        </div>
+        <div className={`text-xs ${textColor}`}>{label}</div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const Expenses = () => {
   const queryClient = useQueryClient();
@@ -31,75 +65,73 @@ const Expenses = () => {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectingExpense, setRejectingExpense] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectingExpense, setRejectingExpense] = useState<any | null>(null);
 
-  const { data: kpiStats, isLoading: kpiLoading } = useQuery({
+  /* =========================
+     KPI QUERY
+  ========================== */
+  const { data: kpis } = useQuery({
     queryKey: ["expense-kpis"],
     queryFn: expenseService.getExpenseKpis,
     staleTime: 60_000,
   });
 
+  /* =========================
+     CATEGORIES
+  ========================== */
   const { data: categoriesData } = useQuery({
-    queryKey: ["expense-categories", 0, 100],
+    queryKey: ["expense-categories"],
     queryFn: () => expenseCategoryService.getCategories(0, 100),
-    staleTime: 60_000,
   });
   const categories = categoriesData?.content ?? [];
 
+  /* =========================
+     EXPENSES
+  ========================== */
   const { data, isLoading } = useQuery({
     queryKey: ["expenses", page],
     queryFn: () => expenseService.getExpenses(page, 10),
-    placeholderData: (prev) => prev,
+    keepPreviousData: true,
   });
 
+  /* =========================
+     HELPERS
+  ========================== */
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+  };
+
+  /* =========================
+     MUTATIONS
+  ========================== */
   const createMut = useMutation({
     mutationFn: expenseService.createExpense,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+      invalidateAll();
       toast({ title: "Success", description: "Expense created" });
       setShowForm(false);
     },
-    onError: (err: any) =>
-      toast({
-        title: "Error",
-        description: err?.message || "Failed",
-        variant: "destructive",
-      }),
   });
 
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: any) =>
       expenseService.updateExpense(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+      invalidateAll();
       toast({ title: "Success", description: "Expense updated" });
       setShowForm(false);
       setEditing(null);
     },
-    onError: (err: any) =>
-      toast({
-        title: "Error",
-        description: err?.message || "Failed",
-        variant: "destructive",
-      }),
   });
 
   const deleteMut = useMutation({
     mutationFn: expenseService.deleteExpense,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+      invalidateAll();
       toast({ title: "Success", description: "Expense deleted" });
     },
-    onError: (err: any) =>
-      toast({
-        title: "Error",
-        description: err?.message || "Failed",
-        variant: "destructive",
-      }),
   });
 
   const approveMut = useMutation({
@@ -119,17 +151,9 @@ const Expenses = () => {
         rejectionReason
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expense-kpis"] });
+      invalidateAll();
       toast({ title: "Success", description: "Expense processed" });
     },
-    onError: (err: any) =>
-      toast({
-        title: "Error",
-        description:
-          err?.response?.data?.message || err?.message || "Failed",
-        variant: "destructive",
-      }),
   });
 
   /* =========================
@@ -141,7 +165,7 @@ const Expenses = () => {
     amount: e.amount,
     category:
       categories.find((c: any) => c.id === e.categoryId)?.name ??
-      String(e.categoryId),
+      e.categoryId,
     date: e.expenseDate,
     status: e.approvalStatus,
     raw: e,
@@ -157,14 +181,15 @@ const Expenses = () => {
       header: "Status",
       accessorKey: "status",
       cell: (row: any) => {
-        let colorClass = "bg-gray-100 text-gray-800";
-        if (row.status === "APPROVED") colorClass = "bg-green-100 text-green-800";
-        else if (row.status === "REJECTED") colorClass = "bg-red-100 text-red-800";
-        else if (row.status === "PENDING_APPROVAL")
-          colorClass = "bg-yellow-100 text-yellow-800";
-
+        const colors: any = {
+          APPROVED: "bg-green-100 text-green-800",
+          REJECTED: "bg-red-100 text-red-800",
+          PENDING_APPROVAL: "bg-yellow-100 text-yellow-800",
+        };
         return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+          <span
+            className={`px-2 py-1 rounded text-xs ${colors[row.status]}`}
+          >
             {row.status.replaceAll("_", " ")}
           </span>
         );
@@ -172,7 +197,6 @@ const Expenses = () => {
     },
     {
       header: "Actions",
-      accessorKey: "actions",
       cell: (row: any) => (
         <div className="flex gap-2">
           <Button
@@ -225,95 +249,98 @@ const Expenses = () => {
     <DashboardLayout>
       <div className="container mx-auto py-8 space-y-6">
 
-        {/* ================= KPI CARDS ================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
-            <CardContent className="flex items-center gap-3 py-4">
-              <BarChart2 className="h-8 w-8 text-blue-500" />
-              <div>
-                <div className="text-lg font-bold">
-                  {kpiLoading ? "--" : kpiStats?.totalCount}
-                </div>
-                <div className="text-xs text-blue-700">Total Expenses</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-50 to-green-100">
-            <CardContent className="flex items-center gap-3 py-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <div className="text-lg font-bold">
-                  {kpiLoading ? "--" : kpiStats?.approvedExpenses}
-                </div>
-                <div className="text-xs text-green-700">Approved</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100">
-            <CardContent className="flex items-center gap-3 py-4">
-              <Clock className="h-8 w-8 text-yellow-500" />
-              <div>
-                <div className="text-lg font-bold">
-                  {kpiLoading ? "--" : kpiStats?.pendingExpenses}
-                </div>
-                <div className="text-xs text-yellow-700">Pending</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-red-50 to-red-100">
-            <CardContent className="flex items-center gap-3 py-4">
-              <XCircle className="h-8 w-8 text-red-500" />
-              <div>
-                <div className="text-lg font-bold">
-                  {kpiLoading ? "--" : kpiStats?.rejectedExpenses}
-                </div>
-                <div className="text-xs text-red-700">Rejected</div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* ================= KPI SUMMARY ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <KpiCard
+            icon={DollarSign}
+            label="Total Amount"
+            value={kpis?.totalExpenses}
+            bg="bg-gradient-to-r from-indigo-50 to-indigo-100"
+            iconColor="text-indigo-500"
+            textColor="text-indigo-700"
+          />
+          <KpiCard
+            icon={Layers}
+            label="Total Count"
+            value={kpis?.totalCount}
+            bg="bg-gradient-to-r from-blue-50 to-blue-100"
+            iconColor="text-blue-500"
+            textColor="text-blue-700"
+          />
+          <KpiCard
+            icon={CheckCircle}
+            label="Approved"
+            value={kpis?.approvedExpenses}
+            bg="bg-gradient-to-r from-green-50 to-green-100"
+            iconColor="text-green-500"
+            textColor="text-green-700"
+          />
+          <KpiCard
+            icon={Clock}
+            label="Pending"
+            value={kpis?.pendingExpenses}
+            bg="bg-gradient-to-r from-yellow-50 to-yellow-100"
+            iconColor="text-yellow-500"
+            textColor="text-yellow-700"
+          />
+          <KpiCard
+            icon={XCircle}
+            label="Rejected"
+            value={kpis?.rejectedExpenses}
+            bg="bg-gradient-to-r from-red-50 to-red-100"
+            iconColor="text-red-500"
+            textColor="text-red-700"
+          />
         </div>
 
-        {/* ================= EXPENSE TABLE ================= */}
+        {/* ================= CATEGORY KPIs ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {Object.entries(kpis?.expenseCountByCategory ?? {}).map(
+            ([category, count]) => (
+              <Card
+                key={category}
+                className="bg-gradient-to-r from-slate-50 to-slate-100"
+              >
+                <CardContent className="py-4">
+                  <div className="text-sm font-medium capitalize text-slate-700">
+                    {category}
+                  </div>
+                  <div className="text-xl font-bold text-slate-900">
+                    {count} expenses
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    Amount: {kpis?.expensesByCategory?.[category] ?? 0}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          )}
+        </div>
+
+        {/* ================= TABLE ================= */}
         <Card>
-          <CardHeader className="flex flex-col sm:flex-row justify-between gap-4">
+          <CardHeader className="flex flex-row justify-between items-center">
             <div>
               <CardTitle>Expenses</CardTitle>
-              <CardDescription>
-                Manage SACCO expenses and approvals
-              </CardDescription>
+              <CardDescription>Manage expenses</CardDescription>
             </div>
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setShowForm(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Expense
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Add Expense
             </Button>
           </CardHeader>
+
           <CardContent>
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
+              <Loader2 className="mx-auto animate-spin" />
             ) : (
-              <DataTable
-                data={rows}
-                columns={columns}
-                keyField="id"
-                emptyMessage="No expenses found"
-              />
+              <DataTable data={rows} columns={columns} keyField="id" />
             )}
           </CardContent>
         </Card>
 
         {/* ================= FORMS ================= */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>
                 {editing ? "Edit Expense" : "Add Expense"}
@@ -322,10 +349,7 @@ const Expenses = () => {
             <ExpenseForm
               categories={categories}
               initialData={editing}
-              onCancel={() => {
-                setShowForm(false);
-                setEditing(null);
-              }}
+              onCancel={() => setShowForm(false)}
               onSubmit={(payload) =>
                 editing
                   ? updateMut.mutate({ id: editing.id, payload })
@@ -335,7 +359,6 @@ const Expenses = () => {
           </DialogContent>
         </Dialog>
 
-        {/* ================= REJECT MODAL ================= */}
         <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
           <DialogContent>
             <DialogHeader>
@@ -343,15 +366,10 @@ const Expenses = () => {
             </DialogHeader>
             <textarea
               className="w-full border rounded p-2"
-              rows={3}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter rejection reason..."
             />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowRejectModal(false)}>
-                Cancel
-              </Button>
               <Button
                 variant="destructive"
                 onClick={() => {
@@ -360,8 +378,6 @@ const Expenses = () => {
                     action: "REJECT",
                     rejectionReason: rejectReason,
                   });
-                  setRejectReason("");
-                  setRejectingExpense(null);
                   setShowRejectModal(false);
                 }}
               >
