@@ -403,6 +403,15 @@ export default function DashboardSidebar() {
           />
 
           {/* Expenses section links */}
+           <SidebarSubmenu
+            icon={<Receipt className="h-5 w-5" />}
+            label="Expenses"
+            collapsed={collapsed}
+            paths={[
+              "/admin/expenses",
+              "/admin/expense-categories"
+            ]}
+          >
           <SidebarLink
             to="/admin/expenses"
             icon={<CircleDollarSign className="h-5 w-5" />}
@@ -417,6 +426,7 @@ export default function DashboardSidebar() {
             active={isActive("/admin/expense-categories")}
             collapsed={collapsed}
           />
+          </SidebarSubmenu>
 
           <SidebarSubmenu
             icon={<Receipt className="h-5 w-5" />}
