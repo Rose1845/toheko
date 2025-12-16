@@ -443,10 +443,10 @@ export interface NextOfKin {
   dob: string;
   birthCertificateNo: string;
   nationality: string;
-  id?: number;
-  nextOfKinId: number;
-  memberId: number;
-  member: Member;
+  // id?: number;
+  // nextOfKinId: number;
+  // memberId: number;
+  // member: Member;
   firstName: string;
   lastName: string;
   relationship: string;
@@ -730,4 +730,32 @@ export interface UserDTO {
   role: {
     roleCode: number;
   }; 
+}
+
+export interface Expense {
+  id: number;
+  title: string;
+  description?: string;
+  amount: number;
+  categoryId?: number;
+  expenseDate?: string;
+  createdBy?: number;
+  createdAt?: string;
+  updatedAt?: string | null;
+  approvalStatus?: string;
+  approvedBy?: number | null;
+  approvedAt?: string | null;
+  rejectedBy?: number | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface ExpenseCategory {
+  id: number;
+  name: string;
+  description?: string;
+  active?: boolean;
+  createdBy?: number;
+  createdAt?: string;
+  updatedAt?: string | null;
 }

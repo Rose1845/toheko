@@ -50,6 +50,8 @@ import LoanApplication from "./pages/user/LoanApplication";
 import Users from "./pages/admin/Users";
 import GroupDetails from "./pages/admin/GroupDetails";
 import LoanAccounts from "./pages/admin/LoanAccounts";
+import Expenses from "./pages/admin/Expenses";
+import ExpenseCategoriesPage from "./pages/admin/ExpenseCategories";
 
 const queryClient = new QueryClient();
 
@@ -113,10 +115,10 @@ const App = () => (
             <Route path="/admin/payments" element={<Payments />} />
             <Route path="/admin/payment-types" element={<PaymentTypes />} />
             <Route path="/admin/payment-modes" element={<PaymentModes />} />
-            <Route
+            {/* <Route
               path="/admin/next-of-kin"
               element={<NextOfKinManagement />}
-            />
+            /> */}
             <Route path="/admin/permissions" element={<Permissions />} />
             <Route path="/admin/board-members" element={<BoardMembers />} />
             <Route path="/admin/savings" element={<AdminSavings />} />
@@ -125,6 +127,9 @@ const App = () => (
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/notifications" element={<Notifications />} />
             <Route path="/admin/loan-accounts" element={<LoanAccounts />} />
+            <Route path="/admin/expenses" element={<Expenses />} />
+            <Route path="/admin/expense-categories" element={<ExpenseCategoriesPage />} />
+
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
