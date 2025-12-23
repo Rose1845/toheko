@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyOTP from "./pages/VerifyOTP";
+import RequestOTP from "./pages/RequestOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/admin/Dashboard";
 import Members from "./pages/admin/Members";
@@ -46,6 +48,7 @@ import LoanApplicationSummary from "./pages/user/LoanApplicationSummary";
 import UserStatements from "./pages/user/Statements";
 import UserProfile from "./pages/user/Profile";
 import UserSettings from "./pages/user/Settings";
+import UserNextOfKin from "./pages/user/NextOfKin";
 import LoanApplication from "./pages/user/LoanApplication";
 import Users from "./pages/admin/Users";
 import GroupDetails from "./pages/admin/GroupDetails";
@@ -66,6 +69,8 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/request-otp" element={<RequestOTP />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/user" element={<ProtectedRoute />}>
             <Route path="dashboard" element={<UserDashboard />} />
@@ -78,6 +83,7 @@ const App = () => (
             {/* <Route path="savings" element={<UserSavings />} /> */}
             <Route path="statements" element={<UserStatements />} />
             <Route path="profile" element={<UserProfile />} />
+            <Route path="next-of-kin" element={<UserNextOfKin />} />
             <Route path="settings" element={<UserSettings />} />
           </Route>
           <Route element={<ProtectedRoute />}>

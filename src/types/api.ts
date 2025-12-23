@@ -61,11 +61,13 @@ export interface RegisterRequest {
 }
 
 export interface AuthenticationResponse {
-  access_token: string;
-  refresh_token: string;
-  expiresIn: number;
-  userId: number;
-  roles: string[];
+  access_token: string | null;
+  refresh_token: string | null;
+  expiresIn?: number;
+  userId?: number;
+  roles?: string[];
+  otp_required?: boolean;
+  message?: string;
 }
 
 export interface MemberRequest {

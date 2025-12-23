@@ -1,187 +1,344 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import UserDashboardLayout from './layout/UserDashboardLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, PlusCircle } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { 
+  FileText, 
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp
+} from 'lucide-react';
+import { jwtDecode } from 'jwt-decode';
+import apiClient from '@/services/api';
+import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
 
-// Dummy loan data
-const dummyLoans = [
-  {
-    id: 1,
-    loanNumber: 'LN-2025-001',
-    type: 'Personal Loan',
-    amount: 50000,
-    balance: 42500,
-    interestRate: 14.5,
-    startDate: '2025-01-15',
-    endDate: '2026-01-15',
-    status: 'Active',
-  },
-  {
-    id: 2,
-    loanNumber: 'LN-2024-089',
-    type: 'Emergency Loan',
-    amount: 15000,
-    balance: 5000,
-    interestRate: 12.0,
-    startDate: '2024-11-10',
-    endDate: '2025-11-10',
-    status: 'Active',
-  }
-];
+interface JwtPayload {
+  sub: string;
+  userId: number;
+  role: string;
+}
+
+interface LoanApplication {
+  loanApplicationId: number;
+  loanApplicationCode: string;
+  loanProductCode: string;
+  memberId: number;
+  lastName: string;
+  email: string;
+  mobileNumber: string;
+  amount: number;
+  termDays: number;
+  status: string;
+  createDate: string;
+  approvalDate: string | null;
+  adminComments: string | null;
+}
+
+interface PageableResponse<T> {
+  content: T[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+  };
+  totalPages: number;
+  totalElements: number;
+  last: boolean;
+  first: boolean;
+  numberOfElements: number;
+}
+
+interface LoanApplicationStatusSummary {
+  pending: number;
+  underReview: number;
+  approved: number;
+  rejected: number;
+  disbursed: number;
+}
 
 const Loans = () => {
-  const navigate = useNavigate();
+  const [applications, setApplications] = useState<LoanApplication[]>([]);
+  const [kpis, setKpis] = useState<LoanApplicationStatusSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
+
+  // Get user info from JWT token
+  const getUserInfo = (): { userId: number; email: string } | null => {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      return {
+        userId: decoded.userId,
+        email: decoded.sub
+      };
+    } catch (error) {
+      console.error('Failed to decode JWT:', error);
+      return null;
+    }
+  };
+
+  // Fetch KPIs and loan applications
+  const fetchData = async (pageNum: number = 0) => {
+    const userInfo = getUserInfo();
+    if (!userInfo) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Fetch both KPIs and loan applications in parallel
+      const [kpiResponse, applicationsResponse] = await Promise.allSettled([
+        apiClient.get<LoanApplicationStatusSummary>(`/api/v1/loan-applications/status-summary/${userInfo.userId}`),
+        apiClient.get<PageableResponse<LoanApplication>>(
+          `/api/v1/loan-applications/get-all?page=${pageNum}&size=${pageSize}&sort=createDate,DESC&q=${userInfo.email}`
+        )
+      ]);
+
+      if (kpiResponse.status === 'fulfilled') {
+        setKpis(kpiResponse.value.data);
+      }
+
+      if (applicationsResponse.status === 'fulfilled') {
+        const data = applicationsResponse.value.data;
+        setApplications(data.content);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
+        setPage(pageNum);
+      }
+    } catch (error) {
+      console.error('Error fetching loan data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(0);
+  }, []);
+
+  const handlePreviousPage = () => {
+    if (page > 0) {
+      fetchData(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages - 1) {
+      fetchData(page + 1);
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusLower = status.toLowerCase();
+    
+    if (statusLower === 'approved') {
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approved</Badge>;
+    } else if (statusLower === 'pending') {
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
+    } else if (statusLower === 'rejected') {
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejected</Badge>;
+    } else if (statusLower === 'underreview' || statusLower === 'under_review') {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Under Review</Badge>;
+    } else if (statusLower === 'disbursed') {
+      return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Disbursed</Badge>;
+    }
+    return <Badge variant="outline">{status}</Badge>;
+  };
 
   return (
     <UserDashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold">My Loans</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">View and manage your active loans</p>
+            <h1 className="text-2xl font-semibold flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              My Loan Applications
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              View all your loan applications and their status
+            </p>
           </div>
-          <Button 
-            className="flex items-center gap-2 text-sm"
-            onClick={() => navigate('/user/loan-application')}
-          >
-            <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Apply for Loan</span>
-            <span className="sm:hidden">Apply</span>
-          </Button>
+          <Link to="/user/loan-application">
+            <Button>
+              <FileText className="h-4 w-4 mr-2" />
+              New Application
+            </Button>
+          </Link>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium">Total Loans</p>
-                  <h3 className="text-xl sm:text-2xl font-bold">2</h3>
+        {/* KPIs */}
+        {kpis && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-yellow-600">{kpis.pending}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Pending</p>
                 </div>
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium">Total Borrowed</p>
-                  <h3 className="text-xl sm:text-2xl font-bold">KES 65,000</h3>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-blue-600">{kpis.underReview}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Under Review</p>
                 </div>
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-amber-50 border-amber-200">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium">Outstanding Balance</p>
-                  <h3 className="text-xl sm:text-2xl font-bold">KES 47,500</h3>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-green-600">{kpis.approved}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Approved</p>
                 </div>
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-red-600">{kpis.rejected}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Rejected</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Loans Table */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-base sm:text-lg">Active Loans</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your current active loans and their status</CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-purple-600">{kpis.disbursed}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Disbursed</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Applications Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>All Applications ({totalElements})</span>
+              {!loading && totalElements > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  Page {page + 1} of {totalPages}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Mobile Cards View */}
-            <div className="block md:hidden space-y-3">
-              {dummyLoans.map((loan) => (
-                <Card key={loan.id} className="p-4 border-l-4 border-l-blue-500">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold text-sm">{loan.loanNumber}</p>
-                        <p className="text-xs text-muted-foreground">{loan.type}</p>
-                      </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {loan.status}
-                      </Badge>
-                    </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading applications...</span>
+              </div>
+            ) : applications.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Loan Applications Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  You haven't submitted any loan applications yet.
+                </p>
+                <Link to="/user/loan-application">
+                  <Button>Apply for a Loan</Button>
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Application Code</TableHead>
+                        <TableHead>Product Code</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Term (Days)</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Applied Date</TableHead>
+                        <TableHead>Approval Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applications.map((app) => (
+                        <TableRow key={app.loanApplicationId}>
+                          <TableCell className="font-medium">
+                            {app.loanApplicationCode}
+                          </TableCell>
+                          <TableCell>{app.loanProductCode}</TableCell>
+                          <TableCell>KES {app.amount.toLocaleString()}</TableCell>
+                          <TableCell>{app.termDays}</TableCell>
+                          <TableCell>{getStatusBadge(app.status)}</TableCell>
+                          <TableCell>{formatDate(app.createDate)}</TableCell>
+                          <TableCell>{formatDate(app.approvalDate)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-muted-foreground text-xs">Principal</p>
-                        <p className="font-medium">KES {loan.amount.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Balance</p>
-                        <p className="font-medium">KES {loan.balance.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Interest Rate</p>
-                        <p className="font-medium">{loan.interestRate}%</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Progress</p>
-                        <p className="font-medium">{Math.round(((loan.amount - loan.balance) / loan.amount) * 100)}% paid</p>
-                      </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, totalElements)} of {totalElements} applications
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousPage}
+                        disabled={page === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={page >= totalPages - 1}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
                     </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Loan Number</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Principal</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Interest Rate</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dummyLoans.map((loan) => (
-                    <TableRow key={loan.id}>
-                      <TableCell className="font-medium">{loan.loanNumber}</TableCell>
-                      <TableCell>{loan.type}</TableCell>
-                      <TableCell>KES {loan.amount.toLocaleString()}</TableCell>
-                      <TableCell>KES {loan.balance.toLocaleString()}</TableCell>
-                      <TableCell>{loan.interestRate}%</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          {loan.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                )}
+              </>
+            )}
           </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 py-3">
-            <div className="text-xs text-muted-foreground text-center sm:text-left">
-              Showing 2 of 2 loans
-            </div>
-            <Button variant="outline" size="sm" className="text-xs">View All Loans</Button>
-          </CardFooter>
         </Card>
       </div>
     </UserDashboardLayout>

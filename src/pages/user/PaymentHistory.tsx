@@ -389,7 +389,11 @@ const PaymentHistoryPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-blue-700">Success Rate</p>
-                    <h3 className="text-xl sm:text-2xl font-bold text-blue-800">{kpis.stkSuccessRate.toFixed(1)}%</h3>
+                    <h3 className="text-xl sm:text-2xl font-bold text-blue-800">
+                      {kpis.stkSuccessRate !== null && kpis.stkSuccessRate !== undefined 
+                        ? `${kpis.stkSuccessRate.toFixed(1)}%` 
+                        : '0.0%'}
+                    </h3>
                     <p className="text-xs text-blue-600">STK Push</p>
                   </div>
                   <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">

@@ -105,15 +105,21 @@ const Register = () => {
         userLastname: formData.userLastname,
         userEmail: formData.userEmail,
         userPhoneNumber: formData.userPhoneNumber,
-        userUsername: formData.userEmail,
         userIdNumber: formData.userIdNumber,
         userPassword: formData.userPassword,
         roleId: 1,
       };
 
-      await authService.register(registerData);
-      toast.success("Registration successful! Redirecting to login...");
-      navigate("/login");
+      const response = await authService.register(registerData);
+      
+      // Check if OTP verification is required
+      if (response.otp_required) {
+        toast.success(response.message || "Registration successful! Please verify OTP sent to your email.");
+        navigate("/verify-otp", { state: { email: formData.userEmail } });
+      } else {
+        toast.success("Registration successful! Redirecting to dashboard...");
+        navigate("/login");
+      }
     } catch (error) {
       console.error("Registration failed:", error);
       toast.error("Registration failed. Please try again.");
@@ -212,40 +218,22 @@ const Register = () => {
                 </div>
               </div>
 
-              {/* Account Fields */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="userUsername" className="text-sm font-medium">Username</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="userUsername"
-                      placeholder="johndoe"
-                      value={formData.userUsername}
-                      onChange={handleInputChange}
-                      required
-                      className={`h-10 pl-9 transition-all ${errors.userUsername ? "border-red-500" : ""}`}
-                    />
-                  </div>
-                  {errors.userUsername && <p className="text-xs text-red-500">{errors.userUsername}</p>}
+              {/* ID Number Field */}
+              <div className="space-y-1.5">
+                <Label htmlFor="userIdNumber" className="text-sm font-medium">ID Number</Label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="userIdNumber"
+                    type="text"
+                    placeholder="12345678"
+                    value={formData.userIdNumber}
+                    onChange={handleInputChange}
+                    required
+                    className={`h-10 pl-9 transition-all ${errors.userIdNumber ? "border-red-500" : ""}`}
+                  />
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="userIdNumber" className="text-sm font-medium">ID Number</Label>
-                  <div className="relative">
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="userIdNumber"
-                      type="text"
-                      placeholder="12345678"
-                      value={formData.userIdNumber}
-                      onChange={handleInputChange}
-                      required
-                      className={`h-10 pl-9 transition-all ${errors.userIdNumber ? "border-red-500" : ""}`}
-                    />
-                  </div>
-                  {errors.userIdNumber && <p className="text-xs text-red-500">{errors.userIdNumber}</p>}
-                </div>
+                {errors.userIdNumber && <p className="text-xs text-red-500">{errors.userIdNumber}</p>}
               </div>
 
               {/* Password Fields */}
