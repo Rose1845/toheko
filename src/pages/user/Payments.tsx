@@ -960,7 +960,7 @@ const Payments = () => {
         <div className="mb-4 bg-card rounded-md p-2 sm:p-3 border">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((step) => (
-              <React.Fragment key={step}>
+              <div key={step} className="contents">
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
@@ -988,7 +988,7 @@ const Payments = () => {
                     }`}
                   ></div>
                 )}
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>

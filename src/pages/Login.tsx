@@ -140,9 +140,27 @@ const Login = () => {
           navigate("/admin/dashboard");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
-      toast.error("Login failed. Please check your credentials and try again.");
+      
+      // Check if error is about OTP not verified
+      const errorMessage = error.response?.data?.errorMessage || error.response?.data?.message || "";
+      const isOTPError = errorMessage.toLowerCase().includes("otp not verified") || 
+                         errorMessage.toLowerCase().includes("otp") && errorMessage.toLowerCase().includes("verify");
+      
+      if (isOTPError) {
+        toast.info("Please verify your OTP first.");
+        
+        // Redirect to OTP request page where user can enter email
+        navigate("/request-otp", { 
+          state: { 
+            email: formData.username,
+            fromLogin: true 
+          } 
+        });
+      } else {
+        toast.error("Login failed. Please check your credentials and try again.");
+      }
     } finally {
       setIsLoading(false);
     }

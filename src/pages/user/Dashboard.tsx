@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import UserDashboardLayout from "./layout/UserDashboardLayout";
-import { CreditCard, PiggyBank, Calendar, Activity, Wallet, TrendingUp, Loader2, AlertCircle, UserCircle } from "lucide-react";
+import { CreditCard, PiggyBank, Calendar, Activity, Wallet, TrendingUp, Loader2, AlertCircle, UserCircle, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { userNextOfKinService, UserNextOfKin } from "@/services/user-services/userNextOfKinService";
 import { jwtDecode } from "jwt-decode";
 import { userPaymentService, PaymentKPIs, Account } from "@/services/user-services/userPaymentService";
 import { userLoanService, LoanApplicationStatusSummary } from "@/services/user-services/userLoanService";
@@ -20,6 +21,7 @@ const UserDashboard = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [paymentKPIs, setPaymentKPIs] = useState<PaymentKPIs | null>(null);
   const [loanSummary, setLoanSummary] = useState<LoanApplicationStatusSummary | null>(null);
+  const [nextOfKin, setNextOfKin] = useState<UserNextOfKin[]>([]);
 
   const getUserId = (): number | null => {
     const token = localStorage.getItem("token");
@@ -44,21 +46,39 @@ const UserDashboard = () => {
 
       try {
         setLoading(true);
-        const [accountsData, kpisData, loanData] = await Promise.allSettled([
+        const [accountsData, kpisData, loanData, nextOfKinData] = await Promise.allSettled([
           userPaymentService.getMemberAccounts(userId),
           userPaymentService.getPaymentKPIs(userId),
           userLoanService.getLoanApplicationStatusSummary(userId),
+          userNextOfKinService.getNextOfKinByMember(userId),
         ]);
 
         if (accountsData.status === "fulfilled") {
           setAccounts(accountsData.value || []);
+        } else {
+          console.error("Failed to load accounts:", accountsData.reason);
         }
+        
         if (kpisData.status === "fulfilled") {
           setPaymentKPIs(kpisData.value);
+        } else {
+          console.error("Failed to load payment KPIs:", kpisData.reason);
         }
+        
         if (loanData.status === "fulfilled") {
           setLoanSummary(loanData.value);
+        } else {
+          console.error("Failed to load loan summary:", loanData.reason);
         }
+        
+        if (nextOfKinData.status === "fulfilled") {
+          setNextOfKin(nextOfKinData.value || []);
+        } else {
+          console.error("Failed to load next of kin:", nextOfKinData.reason);
+        }
+        
+        // Clear any previous errors since we successfully made the requests
+        setError(null);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError("Failed to load dashboard data");
@@ -337,6 +357,56 @@ const UserDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Next of Kin */}
+            <Card className="mt-4 sm:mt-6">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Next of Kin
+                </CardTitle>
+                <Link to="/user/next-of-kin" className="text-xs text-primary hover:underline">
+                  Manage
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {nextOfKin.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Users className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-3">No next of kin added yet</p>
+                    <Link to="/user/next-of-kin">
+                      <span className="text-sm text-primary hover:underline">Add Next of Kin</span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {nextOfKin.slice(0, 3).map((kin) => (
+                      <div key={kin.nextOfKinId} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary">
+                              {kin.firstName.charAt(0)}{kin.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{kin.firstName} {kin.lastName}</p>
+                            <p className="text-xs text-muted-foreground">{kin.relationship}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">{kin.phoneNumber}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {nextOfKin.length > 3 && (
+                      <Link to="/user/next-of-kin" className="block text-center text-xs text-primary hover:underline pt-2">
+                        View all ({nextOfKin.length})
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </div>
