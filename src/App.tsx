@@ -55,6 +55,9 @@ import GroupDetails from "./pages/admin/GroupDetails";
 import LoanAccounts from "./pages/admin/LoanAccounts";
 import Expenses from "./pages/admin/Expenses";
 import ExpenseCategoriesPage from "./pages/admin/ExpenseCategories";
+import LoaneeRegister from "./pages/LoaneeRegister";
+import LoaneeRegistration from "@/pages/loanee/LoaneeRegistration";
+import LoaneeDashboard from "@/pages/loanee/LoaneeDashboard";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +140,8 @@ const App = () => (
             <Route path="/admin/expense-categories" element={<ExpenseCategoriesPage />} />
 
           </Route>
+          <Route path="/loanee-registration" element={<LoaneeRegistration />} />
+          <Route path="/loanee-dashboard" element={<LoaneeDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

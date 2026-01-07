@@ -87,13 +87,44 @@ const VerifyOTP = () => {
         otp: otpCode,
       });
       
+      toast.success("OTP verified successfully!");
       
-      // Show appropriate message based on where user came from
-      if (fromLogin) {
+      // Check if user is a loanee and came from registration
+      const userType = location.state?.userType;
+      const password = location.state?.password;
+      
+      if (userType === "loanee" && password) {
+        // Auto-login for loanee after OTP verification
+        try {
+          const { authService } = await import("@/services/authService");
+          const { jwtDecode } = await import("jwt-decode");
+          
+          const response = await authService.login({
+            username: email,
+            password: password,
+          });
+          
+          if (response.access_token) {
+            localStorage.setItem('token', response.access_token);
+            
+            // Decode token to check role
+            const decoded = jwtDecode<{ sub: string; role: string[]; exp: number }>(response.access_token);
+            
+            // Redirect based on role
+            if (decoded.role.includes("LOANEE")) {
+              toast.success("Welcome to your dashboard!");
+              navigate("/loanee-dashboard");
+              return;
+            }
+          }
+        } catch (loginError) {
+          console.error("Auto-login failed:", loginError);
+          toast.info("Please log in with your credentials.");
+        }
+      } else if (fromLogin) {
         toast.info("You can now log in with your credentials.");
       }
       
-      toast.success("OTP verified successfully!");
       navigate("/login");
     } catch (error: any) {
       console.error("OTP verification failed:", error);
