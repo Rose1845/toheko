@@ -26,7 +26,7 @@ const OverviewStats = () => {
           loanService.getLoanAccountKpi()
         ]);
         setMemberKpis(members);
-        setLoanKpis(loans.body);
+        setLoanKpis(loans);
         setPaymentKpis(payments);
         setLoanAccountKpis(loanAccounts);
       } catch (error) {
