@@ -17,10 +17,10 @@ import { z } from "zod";
 import { jwtDecode } from "jwt-decode";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
-interface TohekoJwtPayload {
+interface DecodedToken {
   sub: string;
-  role: string;
-  [key: string]: any;
+  role: string[];
+  exp: number;
 }
 
 const loginSchema = z.object({
@@ -78,6 +78,32 @@ const Login = () => {
     }
   };
 
+  const handleLoginSuccess = (response: any) => {
+    const token = response.access_token;
+    localStorage.setItem("token", token);
+
+    try {
+      const decoded = jwtDecode<{ sub: string; role: string[] }>(token);
+
+      // Navigate based on user role
+      if (decoded.role.includes("ADMIN")) {
+        toast.success("Login successful! Welcome Admin.");
+        navigate("/admin/dashboard");
+      } else if (decoded.role.includes("LOANEE")) {
+        toast.success("Login successful! Welcome to your dashboard.");
+        navigate("/loanee-dashboard");
+      } else if (decoded.role.includes("MEMBER")) {
+        toast.success("Login successful! Welcome Member.");
+        navigate("/user/dashboard");
+      } else {
+        toast.success("Login successful!");
+        navigate("/user/dashboard"); // default dashboard
+      }
+    } catch (error) {
+      toast.error("Invalid token");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -91,72 +117,32 @@ const Login = () => {
         username: formData.username,
         password: formData.password,
       });
-      
+
       if (response.access_token) {
-        localStorage.setItem('token', response.access_token);
-      }
-      
-      toast.success("Login successful!");
-      
-      if (response.access_token) {
-        try {
-          const decodedToken = jwtDecode<TohekoJwtPayload>(response.access_token);
-          console.log('Decoded JWT Token:', decodedToken);
-          localStorage.setItem("userId", decodedToken.userId);
-          localStorage.setItem("role", decodedToken.role);
-          
-          const userRole = decodedToken.role || '';
-          console.log('User role from JWT:', userRole);
-          
-          const isMember = userRole.toLowerCase().includes('member');
-          
-          if (isMember) {
-            navigate("/user/dashboard");
-          } else {
-            navigate("/admin/dashboard");
-          }
-        } catch (jwtError) {
-          console.error('Error decoding JWT token:', jwtError);
-          const userRoles = response.roles || [];
-          console.log('Fallback - User roles from response:', userRoles);
-          
-          const isMember = userRoles.some(role => role.toLowerCase().includes('member'));
-          
-          if (isMember) {
-            navigate("/user/dashboard");
-          } else {
-            navigate("/admin/dashboard");
-          }
-        }
-      } else {
-        const userRoles = response.roles || [];
-        console.log('No access_token - Using roles from response:', userRoles);
-        
-        const isMember = userRoles.some(role => role.toLowerCase().includes('member'));
-        
-        if (isMember) {
-          navigate("/user/dashboard");
-        } else {
-          navigate("/admin/dashboard");
-        }
+        handleLoginSuccess(response);
       }
     } catch (error: any) {
       console.error("Login failed:", error);
-      
+
       // Check if error is about OTP not verified
-      const errorMessage = error.response?.data?.errorMessage || error.response?.data?.message || "";
-      const isOTPError = errorMessage.toLowerCase().includes("otp not verified") || 
-                         errorMessage.toLowerCase().includes("otp") && errorMessage.toLowerCase().includes("verify");
-      
+      const errorMessage =
+        error.response?.data?.errorMessage ||
+        error.response?.data?.message ||
+        "";
+      const isOTPError =
+        errorMessage.toLowerCase().includes("otp not verified") ||
+        (errorMessage.toLowerCase().includes("otp") &&
+          errorMessage.toLowerCase().includes("verify"));
+
       if (isOTPError) {
         toast.info("Please verify your OTP first.");
-        
+
         // Redirect to OTP request page where user can enter email
-        navigate("/request-otp", { 
-          state: { 
+        navigate("/request-otp", {
+          state: {
             email: formData.username,
-            fromLogin: true 
-          } 
+            fromLogin: true,
+          },
         });
       } else {
         toast.error("Login failed. Please check your credentials and try again.");
@@ -187,7 +173,7 @@ const Login = () => {
         {/* Card */}
         <Card className="shadow-2xl border-0 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sacco-500 via-sacco-600 to-sacco-700"></div>
-          
+
           <CardHeader className="pb-4 pt-6">
             <CardTitle className="text-xl font-bold text-center text-gray-900">
               Sign In
@@ -197,7 +183,9 @@ const Login = () => {
           <CardContent className="px-6 pb-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="username" className="text-sm font-medium">Email</Label>
+                <Label htmlFor="username" className="text-sm font-medium">
+                  Email
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
@@ -207,7 +195,9 @@ const Login = () => {
                     value={formData.username}
                     onChange={handleInputChange}
                     required
-                    className={`h-10 pl-9 transition-all ${errors.username ? "border-red-500" : ""}`}
+                    className={`h-10 pl-9 transition-all ${
+                      errors.username ? "border-red-500" : ""
+                    }`}
                   />
                 </div>
                 {errors.username && (
@@ -217,7 +207,9 @@ const Login = () => {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </Label>
                   <Link
                     to="/forgot-password"
                     className="text-xs font-medium text-sacco-600 hover:text-sacco-700 hover:underline transition-colors"
@@ -234,14 +226,20 @@ const Login = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className={`h-10 pl-9 pr-9 transition-all ${errors.password ? "border-red-500" : ""}`}
+                    className={`h-10 pl-9 pr-9 transition-all ${
+                      errors.password ? "border-red-500" : ""
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -260,9 +258,9 @@ const Login = () => {
               </div>
 
               <div className="pt-2">
-                <Button 
-                  type="submit" 
-                  className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-sacco-600 to-sacco-700 hover:from-sacco-700 hover:to-sacco-800 shadow-lg hover:shadow-xl transition-all group" 
+                <Button
+                  type="submit"
+                  className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-sacco-600 to-sacco-700 hover:from-sacco-700 hover:to-sacco-800 shadow-lg hover:shadow-xl transition-all group"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -289,6 +287,15 @@ const Login = () => {
                 className="font-semibold text-sacco-600 hover:text-sacco-700 hover:underline transition-colors"
               >
                 Create one
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600 text-center">
+              Looking for a loan?{" "}
+              <Link
+                to="/loanee-registration"
+                className="font-semibold text-sacco-600 hover:text-sacco-700 hover:underline transition-colors"
+              >
+                Register as Loanee
               </Link>
             </p>
           </CardFooter>
