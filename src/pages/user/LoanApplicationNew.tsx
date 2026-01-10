@@ -64,6 +64,13 @@ const LoanApplication = () => {
   const [collaterals, setCollaterals] = useState<CollateralRequest[]>([]);
   const [nextOfKin, setNextOfKin] = useState<NextOfKinRequest[]>([]);
 
+  // Validation error states
+  const [amountError, setAmountError] = useState('');
+  const [termError, setTermError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+
   // Function to reset application state
   const resetApplication = () => {
     setCurrentStep(1);
@@ -122,6 +129,129 @@ const LoanApplication = () => {
     }
   };
 
+  // Validation function for loan amount
+  const validateAmount = (value: string): boolean => {
+    setAmountError('');
+    if (!value || value.trim() === '') {
+      setAmountError('Loan amount is required');
+      return false;
+    }
+    const numValue = Number(value);
+    if (isNaN(numValue)) {
+      setAmountError('Please enter a valid number');
+      return false;
+    }
+    if (numValue <= 0) {
+      setAmountError('Amount must be greater than 0');
+      return false;
+    }
+    if (selectedLoanProduct) {
+      if (numValue < selectedLoanProduct.minAmount) {
+        setAmountError(`Amount cannot be less than KES ${selectedLoanProduct.minAmount.toLocaleString()}`);
+        return false;
+      }
+      if (numValue > selectedLoanProduct.maxAmount) {
+        setAmountError(`Amount cannot exceed KES ${selectedLoanProduct.maxAmount.toLocaleString()}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Validation function for term days
+  const validateTermDays = (value: string): boolean => {
+    setTermError('');
+    if (!value || value.trim() === '') {
+      setTermError('Loan term is required');
+      return false;
+    }
+    const numValue = Number(value);
+    if (isNaN(numValue)) {
+      setTermError('Please enter a valid number');
+      return false;
+    }
+    if (numValue <= 0 || !Number.isInteger(numValue)) {
+      setTermError('Term must be a positive whole number');
+      return false;
+    }
+    if (selectedLoanProduct) {
+      if (numValue < selectedLoanProduct.minTermDays) {
+        setTermError(`Term cannot be less than ${selectedLoanProduct.minTermDays} days`);
+        return false;
+      }
+      if (numValue > selectedLoanProduct.maxTermDays) {
+        setTermError(`Term cannot exceed ${selectedLoanProduct.maxTermDays} days`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Validation function for email
+  const validateEmail = (value: string): boolean => {
+    setEmailError('');
+    if (!value || value.trim() === '') {
+      setEmailError('Email is required');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    return true;
+  };
+
+  // Validation function for phone number
+  const validatePhone = (value: string): boolean => {
+    setPhoneError('');
+    if (!value || value.trim() === '') {
+      setPhoneError('Phone number is required');
+      return false;
+    }
+    const phoneRegex = /^(\+254|0)?[17]\d{8}$/;
+    if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+      setPhoneError('Please enter a valid Kenyan phone number');
+      return false;
+    }
+    return true;
+  };
+
+  // Validate all form fields
+  const validateAllFields = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    let isValid = true;
+
+    if (!validateAmount(applicationForm.amount)) isValid = false;
+    if (!validateTermDays(applicationForm.termDays)) isValid = false;
+    if (!validateEmail(applicationForm.email)) isValid = false;
+    if (!validatePhone(applicationForm.mobileNumber)) isValid = false;
+
+    if (!applicationForm.firstName || !applicationForm.firstName.trim()) {
+      errors.firstName = 'First name is required';
+      isValid = false;
+    }
+    if (!applicationForm.lastName || !applicationForm.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+      isValid = false;
+    }
+    if (!applicationForm.occupation || !applicationForm.occupation.trim()) {
+      errors.occupation = 'Occupation is required';
+      isValid = false;
+    }
+    if (!applicationForm.loanPurpose || !applicationForm.loanPurpose.trim()) {
+      errors.loanPurpose = 'Loan purpose is required';
+      isValid = false;
+    }
+    if (!applicationForm.address || !applicationForm.address.trim()) {
+      errors.address = 'Address is required';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const nextStep = () => {
     // Validation logic for each step
     if (currentStep === 1 && !selectedLoanProduct) {
@@ -130,18 +260,19 @@ const LoanApplication = () => {
     }
     
     if (currentStep === 2) {
-      if (!applicationForm.amount || Number(applicationForm.amount) < selectedLoanProduct!.minAmount || Number(applicationForm.amount) > selectedLoanProduct!.maxAmount) {
-        toast.error(`Amount must be between KES ${selectedLoanProduct!.minAmount} and KES ${selectedLoanProduct!.maxAmount}`);
-        return;
-      }
-      
-      if (!applicationForm.termDays || Number(applicationForm.termDays) < selectedLoanProduct!.minTermDays || Number(applicationForm.termDays) > selectedLoanProduct!.maxTermDays) {
-        toast.error(`Term must be between ${selectedLoanProduct!.minTermDays} and ${selectedLoanProduct!.maxTermDays} days`);
-        return;
-      }
-
-      if (!applicationForm.firstName || !applicationForm.lastName || !applicationForm.email || !applicationForm.mobileNumber) {
-        toast.error('Please fill in all required fields');
+      if (!validateAllFields()) {
+        if (amountError) {
+          toast.error(amountError);
+        } else if (termError) {
+          toast.error(termError);
+        } else if (emailError) {
+          toast.error(emailError);
+        } else if (phoneError) {
+          toast.error(phoneError);
+        } else {
+          const firstError = Object.values(formErrors)[0];
+          toast.error(firstError || 'Please fill in all required fields');
+        }
         return;
       }
     }
@@ -232,6 +363,23 @@ const LoanApplication = () => {
   };
 
   const handleSubmitApplication = async () => {
+    // Validate all fields before submitting
+    if (!validateAllFields()) {
+      if (amountError) {
+        toast.error(amountError);
+      } else if (termError) {
+        toast.error(termError);
+      } else if (emailError) {
+        toast.error(emailError);
+      } else if (phoneError) {
+        toast.error(phoneError);
+      } else {
+        const firstError = Object.values(formErrors)[0];
+        toast.error(firstError || 'Please fill in all required fields');
+      }
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -284,6 +432,31 @@ const LoanApplication = () => {
       return;
     }
 
+    // Validate each guarantor has all required fields
+    for (let i = 0; i < guarantors.length; i++) {
+      const g = guarantors[i];
+      if (!g.guarantorName?.trim()) {
+        toast.error(`Guarantor ${i + 1}: Name is required`);
+        return;
+      }
+      if (!g.relationship?.trim()) {
+        toast.error(`Guarantor ${i + 1}: Relationship is required`);
+        return;
+      }
+      if (!g.guarantorContact?.trim()) {
+        toast.error(`Guarantor ${i + 1}: Contact is required`);
+        return;
+      }
+      if (!g.guarantorIdNumber?.trim()) {
+        toast.error(`Guarantor ${i + 1}: ID Number is required`);
+        return;
+      }
+      if (!g.guaranteedAmount || g.guaranteedAmount <= 0) {
+        toast.error(`Guarantor ${i + 1}: Guaranteed amount must be greater than 0`);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       for (const guarantor of guarantors) {
@@ -308,6 +481,31 @@ const LoanApplication = () => {
       return;
     }
 
+    // Validate each collateral has all required fields
+    for (let i = 0; i < collaterals.length; i++) {
+      const c = collaterals[i];
+      if (!c.type?.trim()) {
+        toast.error(`Collateral ${i + 1}: Type is required`);
+        return;
+      }
+      if (!c.estimatedValue || c.estimatedValue <= 0) {
+        toast.error(`Collateral ${i + 1}: Estimated value must be greater than 0`);
+        return;
+      }
+      if (!c.description?.trim()) {
+        toast.error(`Collateral ${i + 1}: Description is required`);
+        return;
+      }
+      if (!c.ownerName?.trim()) {
+        toast.error(`Collateral ${i + 1}: Owner name is required`);
+        return;
+      }
+      if (!c.ownerContact?.trim()) {
+        toast.error(`Collateral ${i + 1}: Owner contact is required`);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       for (const collateral of collaterals) {
@@ -330,6 +528,27 @@ const LoanApplication = () => {
     if (nextOfKin.length === 0) {
       toast.error('Please add at least one next of kin');
       return;
+    }
+
+    // Validate each next of kin has all required fields
+    for (let i = 0; i < nextOfKin.length; i++) {
+      const nok = nextOfKin[i];
+      if (!nok.name?.trim()) {
+        toast.error(`Next of Kin ${i + 1}: Name is required`);
+        return;
+      }
+      if (!nok.relationship?.trim()) {
+        toast.error(`Next of Kin ${i + 1}: Relationship is required`);
+        return;
+      }
+      if (!nok.phone?.trim()) {
+        toast.error(`Next of Kin ${i + 1}: Phone number is required`);
+        return;
+      }
+      if (!validatePhone(nok.phone)) {
+        toast.error(`Next of Kin ${i + 1}: Invalid phone format. Use 0712345678 or +254712345678`);
+        return;
+      }
     }
 
     setIsLoading(true);

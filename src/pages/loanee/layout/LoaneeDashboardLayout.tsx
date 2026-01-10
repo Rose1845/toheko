@@ -3,22 +3,16 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  CreditCard,
   FileText,
   Settings,
   Menu,
   X,
   LogOut,
   User,
-  History,
-  Clock,
-  DollarSign,
-  HelpCircle,
-  Bell,
-  Wallet,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
-import { Badge } from "@/components/ui/badge";
+import LoaneeDashboardHeader from "./LoaneeDashboardHeader";
 
 interface LoaneeDashboardLayoutProps {
   children: React.ReactNode;
@@ -32,7 +26,6 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
     isMobile: false,
     isOpen: true,
   });
-  const [userEmail, setUserEmail] = useState<string>("");
 
   // Handle responsive behavior
   useEffect(() => {
@@ -47,17 +40,6 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    // Get user email from token
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserEmail(payload.sub || "");
-      } catch (error) {
-        console.error("Failed to decode token", error);
-      }
-    }
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -71,17 +53,8 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
     {
       title: "Loans",
       items: [
-        { label: "Apply for Loan", icon: <FileText size={18} />, path: "/loanee/apply-loan", badge: "New" },
-        { label: "My Loans", icon: <CreditCard size={18} />, path: "/loanee/my-loans" },
-        { label: "Loan Status", icon: <Clock size={18} />, path: "/loanee/loan-status" },
-        { label: "Repayment Schedule", icon: <DollarSign size={18} />, path: "/loanee/repayment-schedule" },
-      ]
-    },
-    {
-      title: "Payments",
-      items: [
-        { label: "Make Payment", icon: <Wallet size={18} />, path: "/loanee/make-payment" },
-        { label: "Payment History", icon: <History size={18} />, path: "/loanee/payment-history" },
+        { label: "Apply for Loan", icon: <FileText size={18} />, path: "/loanee/loan-application" },
+        { label: "My Applications", icon: <ClipboardList size={18} />, path: "/loanee/applications" },
       ]
     },
     {
@@ -89,7 +62,6 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
       items: [
         { label: "Profile", icon: <User size={18} />, path: "/loanee/profile" },
         { label: "Settings", icon: <Settings size={18} />, path: "/loanee/settings" },
-        { label: "Help & Support", icon: <HelpCircle size={18} />, path: "/loanee/support" },
       ]
     }
   ];
@@ -97,7 +69,7 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
   const handleLogout = () => {
     localStorage.removeItem("token");
     toast.success("You have been logged out successfully");
-    navigate("/login");
+    navigate("/loanee/login");
   };
 
   const toggleSidebar = () => {
@@ -105,27 +77,19 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-gray-50">
-      {/* Mobile Overlay */}
-      {sidebarState.isMobile && sidebarState.isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-10"
-          onClick={toggleSidebar}
-        />
-      )}
-
+    <div className="min-h-screen w-full flex bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
       <aside
         className={`${sidebarState.isOpen ? "translate-x-0" : "-translate-x-full"}
                 ${sidebarState.collapsed && !sidebarState.isMobile ? "w-16" : "w-60"}
-                fixed left-0 top-0 z-20 h-screen flex flex-col border-r bg-background
+                fixed left-0 top-0 z-20 h-screen flex flex-col border-r bg-background dark:bg-gray-800
                 transition-all duration-300 ease-in-out md:translate-x-0 shadow-sm`}
       >
         {/* Header */}
         <div className="flex h-14 items-center border-b px-3 justify-between">
           <div className="flex items-center">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              L
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              TS
             </div>
             {!sidebarState.collapsed && (
               <div className="ml-3">
@@ -164,7 +128,7 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
                       onClick={() => sidebarState.isMobile && toggleSidebar()}
                       className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-150 ${
                         isActive
-                          ? "bg-blue-600 text-white shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                       title={sidebarState.collapsed ? item.label : ""}
@@ -173,12 +137,7 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
                         {item.icon}
                       </span>
                       {!sidebarState.collapsed && (
-                        <span className="flex-1">{item.label}</span>
-                      )}
-                      {!sidebarState.collapsed && item.badge && (
-                        <Badge variant="secondary" className="ml-auto text-xs bg-green-100 text-green-700 hover:bg-green-100">
-                          {item.badge}
-                        </Badge>
+                        <span className="truncate font-medium">{item.label}</span>
                       )}
                     </Link>
                   );
@@ -188,72 +147,38 @@ const LoaneeDashboardLayout: React.FC<LoaneeDashboardLayoutProps> = ({ children 
           ))}
         </nav>
 
-        {/* User Profile Section */}
+        {/* Footer */}
         <div className="border-t p-3">
-          {!sidebarState.collapsed ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
-                  {userEmail.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{userEmail}</p>
-                  <p className="text-xs text-muted-foreground">Loanee</p>
-                </div>
-              </div>
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs h-8"
-              >
-                <LogOut className="h-3.5 w-3.5 mr-2" />
-                Logout
-              </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              size="icon"
-              className="w-full h-10"
-              title="Logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            className={`w-full flex items-center ${sidebarState.collapsed ? "justify-center" : "justify-start"} px-2 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors`}
+            onClick={handleLogout}
+            title={sidebarState.collapsed ? "Logout" : ""}
+          >
+            <LogOut className={`h-4 w-4 ${!sidebarState.collapsed ? "mr-3" : ""}`} />
+            {!sidebarState.collapsed && <span className="font-medium">Logout</span>}
+          </Button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarState.collapsed && !sidebarState.isMobile ? "md:ml-16" : "md:ml-60"
-        }`}
-      >
-        {/* Top Header */}
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 shadow-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className="md:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          
-          <div className="flex-1" />
-          
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-          </Button>
-        </header>
+      {/* Mobile overlay */}
+      {sidebarState.isOpen && sidebarState.isMobile && (
+        <div
+          className="fixed inset-0 z-10 bg-black/50 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
-        </main>
+      {/* Content area */}
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
+                   ${sidebarState.isOpen && !sidebarState.isMobile
+                       ? sidebarState.collapsed ? "md:ml-16" : "md:ml-60"
+                       : "ml-0"
+                   }`}
+      >
+        <LoaneeDashboardHeader toggleSidebar={toggleSidebar} sidebarOpen={sidebarState.isOpen} />
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
