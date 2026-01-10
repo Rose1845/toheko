@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
+import MemberLogin from "./pages/MemberLogin";
+import LoaneeLogin from "./pages/LoaneeLogin";
 import Register from "./pages/Register";
 import VerifyOTP from "./pages/VerifyOTP";
 import RequestOTP from "./pages/RequestOTP";
@@ -58,6 +61,10 @@ import ExpenseCategoriesPage from "./pages/admin/ExpenseCategories";
 import LoaneeRegister from "./pages/LoaneeRegister";
 import LoaneeRegistration from "@/pages/loanee/LoaneeRegistration";
 import LoaneeDashboard from "@/pages/loanee/LoaneeDashboard";
+import LoaneeLoanApplication from "@/pages/loanee/LoaneeLoanApplication";
+import LoaneeApplications from "@/pages/loanee/LoaneeApplications";
+import LoaneeProfile from "@/pages/loanee/LoaneeProfile";
+import LoaneeSettings from "@/pages/loanee/LoaneeSettings";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +76,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           {/* <Route path="/" element={<LandingPage />} /> */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<MemberLogin />} />
+          <Route path="/login" element={<MemberLogin />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/member/login" element={<MemberLogin />} />
+          <Route path="/loanee/login" element={<LoaneeLogin />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/request-otp" element={<RequestOTP />} />
@@ -142,6 +152,10 @@ const App = () => (
           </Route>
           <Route path="/loanee-registration" element={<LoaneeRegistration />} />
           <Route path="/loanee-dashboard" element={<LoaneeDashboard />} />
+          <Route path="/loanee/loan-application" element={<LoaneeLoanApplication />} />
+          <Route path="/loanee/applications" element={<LoaneeApplications />} />
+          <Route path="/loanee/profile" element={<LoaneeProfile />} />
+          <Route path="/loanee/settings" element={<LoaneeSettings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
